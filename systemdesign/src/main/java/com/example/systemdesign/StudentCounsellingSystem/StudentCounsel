@@ -1,0 +1,606 @@
+
+Design Patterns Used:
+Repository Pattern - Data access abstraction
+
+Service Layer Pattern - Business logic separation
+
+Factory Pattern - Object creation
+
+Strategy Pattern - Different reminder strategies
+
+Observer Pattern - Notifications
+
+DTO Pattern - Data transfer objects
+
+Dependency Injection - Loose coupling
+
+
+
+1. Domain Models
+
+// Enums
+public enum AppointmentStatus {
+    SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+}
+
+public enum NotificationType {
+    EMAIL, SMS, PUSH
+}
+
+// Domain Entities
+public class Student {
+    private String studentId;
+    private String name;
+    private String email;
+    private String phoneNumber;
+    private String faculty;
+    private int yearOfStudy;
+    
+    // Constructors, getters, setters
+    public Student(String studentId, String name, String email, 
+                   String phoneNumber, String faculty, int yearOfStudy) {
+        this.studentId = studentId;
+        this.name = name;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
+        this.faculty = faculty;
+        this.yearOfStudy = yearOfStudy;
+    }
+    
+    // Getters and setters...
+    public String getStudentId() { return studentId; }
+    public String getEmail() { return email; }
+    public String getPhoneNumber() { return phoneNumber; }
+}
+
+public class Counsellor {
+    private String counsellorId;
+    private String name;
+    private String email;
+    private List<String> specializations;
+    private String bio;
+    
+    public Counsellor(String counsellorId, String name, String email, 
+                      List<String> specializations, String bio) {
+        this.counsellorId = counsellorId;
+        this.name = name;
+        this.email = email;
+        this.specializations = specializations;
+        this.bio = bio;
+    }
+    
+    // Getters and setters...
+}
+
+public class Appointment {
+    private String appointmentId;
+    private String studentId;
+    private String counsellorId;
+    private LocalDateTime dateTime;
+    private AppointmentStatus status;
+    private int durationMinutes;
+    private String concernCategory;
+    
+    public Appointment(String appointmentId, String studentId, String counsellorId,
+                      LocalDateTime dateTime, AppointmentStatus status, 
+                      int durationMinutes, String concernCategory) {
+        this.appointmentId = appointmentId;
+        this.studentId = studentId;
+        this.counsellorId = counsellorId;
+        this.dateTime = dateTime;
+        this.status = status;
+        this.durationMinutes = durationMinutes;
+        this.concernCategory = concernCategory;
+    }
+    
+    // Getters and setters...
+    public void setStatus(AppointmentStatus status) {
+        this.status = status;
+    }
+}
+
+public class SessionNote {
+    private String noteId;
+    private String appointmentId;
+    private String counsellorId;
+    private String content;
+    private LocalDateTime dateCreated;
+    
+    // Constructor, getters, setters...
+}
+
+public class TimeSlot {
+    private String counsellorId;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private boolean isAvailable;
+    
+    // Constructor, getters, setters...
+}
+
+
+
+2. Repository Interfaces (Repository Pattern)
+
+// Repository Interfaces
+public interface StudentRepository {
+    Optional<Student> findById(String studentId);
+    Optional<Student> findByEmail(String email);
+    Student save(Student student);
+    List<Student> findAll();
+}
+
+public interface CounsellorRepository {
+    Optional<Counsellor> findById(String counsellorId);
+    List<Counsellor> findAll();
+    List<Counsellor> findBySpecialization(String specialization);
+    Counsellor save(Counsellor counsellor);
+}
+
+public interface AppointmentRepository {
+    Optional<Appointment> findById(String appointmentId);
+    List<Appointment> findByStudentId(String studentId);
+    List<Appointment> findByCounsellorId(String counsellorId);
+    List<Appointment> findByCounsellorAndDate(String counsellorId, LocalDate date);
+    Appointment save(Appointment appointment);
+    boolean delete(String appointmentId);
+}
+
+public interface SessionNoteRepository {
+    Optional<SessionNote> findByAppointmentId(String appointmentId);
+    List<SessionNote> findByCounsellorId(String counsellorId);
+    SessionNote save(SessionNote sessionNote);
+}
+
+public interface TimeSlotRepository {
+    List<TimeSlot> findAvailableSlotsByCounsellor(String counsellorId, LocalDate date);
+    TimeSlot save(TimeSlot timeSlot);
+    void markSlotUnavailable(String counsellorId, LocalDateTime startTime);
+}
+
+
+
+3. Service Layer (Service Layer Pattern)
+
+// DTOs for data transfer
+public class AppointmentRequest {
+    private String studentId;
+    private String counsellorId;
+    private LocalDateTime preferredTime;
+    private String concernCategory;
+    
+    // Constructor, getters, setters...
+}
+
+public class AppointmentResponse {
+    private String appointmentId;
+    private String studentName;
+    private String counsellorName;
+    private LocalDateTime dateTime;
+    private String status;
+    private String concernCategory;
+    
+    // Constructor, getters, setters...
+}
+
+// Main Service Class
+@Service
+public class AppointmentService {
+    
+    private final AppointmentRepository appointmentRepository;
+    private final StudentRepository studentRepository;
+    private final CounsellorRepository counsellorRepository;
+    private final TimeSlotRepository timeSlotRepository;
+    private final NotificationService notificationService;
+    
+    @Autowired
+    public AppointmentService(AppointmentRepository appointmentRepository,
+                            StudentRepository studentRepository,
+                            CounsellorRepository counsellorRepository,
+                            TimeSlotRepository timeSlotRepository,
+                            NotificationService notificationService) {
+        this.appointmentRepository = appointmentRepository;
+        this.studentRepository = studentRepository;
+        this.counsellorRepository = counsellorRepository;
+        this.timeSlotRepository = timeSlotRepository;
+        this.notificationService = notificationService;
+    }
+    
+    public AppointmentResponse bookAppointment(AppointmentRequest request) {
+        // Validate student exists
+        Student student = studentRepository.findById(request.getStudentId())
+            .orElseThrow(() -> new IllegalArgumentException("Student not found"));
+        
+        // Validate counsellor exists
+        Counsellor counsellor = counsellorRepository.findById(request.getCounsellorId())
+            .orElseThrow(() -> new IllegalArgumentException("Counsellor not found"));
+        
+        // Check time slot availability
+        if (!isTimeSlotAvailable(request.getCounsellorId(), request.getPreferredTime())) {
+            throw new IllegalArgumentException("Time slot not available");
+        }
+        
+        // Create appointment
+        Appointment appointment = new Appointment(
+            generateAppointmentId(),
+            request.getStudentId(),
+            request.getCounsellorId(),
+            request.getPreferredTime(),
+            AppointmentStatus.SCHEDULED,
+            50, // default duration
+            request.getConcernCategory()
+        );
+        
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        
+        // Mark time slot as unavailable
+        timeSlotRepository.markSlotUnavailable(
+            request.getCounsellorId(), 
+            request.getPreferredTime()
+        );
+        
+        // Send confirmation notification
+        notificationService.sendAppointmentConfirmation(savedAppointment, student);
+        
+        return convertToResponse(savedAppointment, student, counsellor);
+    }
+    
+    public void cancelAppointment(String appointmentId, String studentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+        
+        if (!appointment.getStudentId().equals(studentId)) {
+            throw new SecurityException("Not authorized to cancel this appointment");
+        }
+        
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            throw new IllegalStateException("Only scheduled appointments can be cancelled");
+        }
+        
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        appointmentRepository.save(appointment);
+        
+        // Free up the time slot
+        timeSlotRepository.markSlotAvailable(
+            appointment.getCounsellorId(),
+            appointment.getDateTime()
+        );
+        
+        // Send cancellation notification
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student != null) {
+            notificationService.sendAppointmentCancellation(appointment, student);
+        }
+    }
+    
+    public SessionNote createSessionNote(String appointmentId, String counsellorId, String content) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+        
+        if (!appointment.getCounsellorId().equals(counsellorId)) {
+            throw new SecurityException("Not authorized to add notes to this appointment");
+        }
+        
+        if (appointment.getStatus() != AppointmentStatus.COMPLETED) {
+            throw new IllegalStateException("Can only add notes to completed appointments");
+        }
+        
+        SessionNote sessionNote = new SessionNote(
+            generateNoteId(),
+            appointmentId,
+            counsellorId,
+            content,
+            LocalDateTime.now()
+        );
+        
+        return sessionNoteRepository.save(sessionNote);
+    }
+    
+    private boolean isTimeSlotAvailable(String counsellorId, LocalDateTime dateTime) {
+        List<TimeSlot> availableSlots = timeSlotRepository
+            .findAvailableSlotsByCounsellor(counsellorId, dateTime.toLocalDate());
+        
+        return availableSlots.stream()
+            .anyMatch(slot -> slot.getStartTime().equals(dateTime) && slot.isAvailable());
+    }
+    
+    private String generateAppointmentId() {
+        return "APT_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    private String generateNoteId() {
+        return "NOTE_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    private AppointmentResponse convertToResponse(Appointment appointment, 
+                                                Student student, Counsellor counsellor) {
+        return new AppointmentResponse(
+            appointment.getAppointmentId(),
+            student.getName(),
+            counsellor.getName(),
+            appointment.getDateTime(),
+            appointment.getStatus().name(),
+            appointment.getConcernCategory()
+        );
+    }
+}
+
+
+
+4. Strategy Pattern for Notifications
+
+// Strategy Interface
+public interface NotificationStrategy {
+    void sendNotification(String recipient, String subject, String message);
+    boolean supports(NotificationType type);
+}
+
+// Concrete Strategies
+@Component
+public class EmailNotificationStrategy implements NotificationStrategy {
+    
+    @Override
+    public void sendNotification(String recipient, String subject, String message) {
+        // Implementation for sending email
+        System.out.println("Sending email to: " + recipient);
+        System.out.println("Subject: " + subject);
+        System.out.println("Message: " + message);
+    }
+    
+    @Override
+    public boolean supports(NotificationType type) {
+        return type == NotificationType.EMAIL;
+    }
+}
+
+@Component
+public class SMSNotificationStrategy implements NotificationStrategy {
+    
+    @Override
+    public void sendNotification(String recipient, String subject, String message) {
+        // Implementation for sending SMS
+        System.out.println("Sending SMS to: " + recipient);
+        System.out.println("Message: " + message);
+    }
+    
+    @Override
+    public boolean supports(NotificationType type) {
+        return type == NotificationType.SMS;
+    }
+}
+
+// Notification Context
+@Service
+public class NotificationService {
+    
+    private final List<NotificationStrategy> strategies;
+    
+    @Autowired
+    public NotificationService(List<NotificationStrategy> strategies) {
+        this.strategies = strategies;
+    }
+    
+    public void sendAppointmentConfirmation(Appointment appointment, Student student) {
+        String subject = "Appointment Confirmation";
+        String message = String.format(
+            "Your appointment with counsellor is confirmed for %s",
+            appointment.getDateTime()
+        );
+        
+        sendNotification(student, NotificationType.EMAIL, subject, message);
+    }
+    
+    public void sendAppointmentCancellation(Appointment appointment, Student student) {
+        String subject = "Appointment Cancelled";
+        String message = "Your appointment has been cancelled successfully";
+        
+        sendNotification(student, NotificationType.EMAIL, subject, message);
+    }
+    
+    public void sendReminder(Appointment appointment, Student student) {
+        String subject = "Appointment Reminder";
+        String message = String.format(
+            "Reminder: You have an appointment tomorrow at %s",
+            appointment.getDateTime()
+        );
+        
+        sendNotification(student, NotificationType.EMAIL, subject, message);
+        sendNotification(student, NotificationType.SMS, subject, message);
+    }
+    
+    private void sendNotification(Student student, NotificationType type, 
+                                 String subject, String message) {
+        NotificationStrategy strategy = strategies.stream()
+            .filter(s -> s.supports(type))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("No strategy found for type: " + type));
+        
+        String recipient = type == NotificationType.EMAIL ? 
+            student.getEmail() : student.getPhoneNumber();
+        
+        strategy.sendNotification(recipient, subject, message);
+    }
+}
+
+
+
+5. Observer Pattern for Reminder System
+
+// Observer Interface
+public interface AppointmentObserver {
+    void onAppointmentScheduled(Appointment appointment);
+    void onAppointment24HoursBefore(Appointment appointment);
+}
+
+// Observable Subject
+@Service
+public class AppointmentScheduler {
+    
+    private final List<AppointmentObserver> observers = new ArrayList<>();
+    
+    public void addObserver(AppointmentObserver observer) {
+        observers.add(observer);
+    }
+    
+    public void removeObserver(AppointmentObserver observer) {
+        observers.remove(observer);
+    }
+    
+    public void scheduleAppointment(Appointment appointment) {
+        // Save appointment logic...
+        
+        // Notify observers
+        notifyAppointmentScheduled(appointment);
+        
+        // Schedule 24-hour reminder
+        schedule24HourReminder(appointment);
+    }
+    
+    private void notifyAppointmentScheduled(Appointment appointment) {
+        observers.forEach(observer -> 
+            observer.onAppointmentScheduled(appointment));
+    }
+    
+    private void notifyAppointment24HoursBefore(Appointment appointment) {
+        observers.forEach(observer -> 
+            observer.onAppointment24HoursBefore(appointment));
+    }
+    
+    private void schedule24HourReminder(Appointment appointment) {
+        // Implementation to schedule reminder 24 hours before appointment
+        Timer timer = new Timer();
+        LocalDateTime reminderTime = appointment.getDateTime().minusHours(24);
+        
+        // Convert to Date and schedule task
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                notifyAppointment24HoursBefore(appointment);
+            }
+        }, java.sql.Timestamp.valueOf(reminderTime));
+    }
+}
+
+// Concrete Observer
+@Component
+public class ReminderService implements AppointmentObserver {
+    
+    private final NotificationService notificationService;
+    private final StudentRepository studentRepository;
+    
+    @Autowired
+    public ReminderService(NotificationService notificationService,
+                          StudentRepository studentRepository) {
+        this.notificationService = notificationService;
+        this.studentRepository = studentRepository;
+    }
+    
+    @Override
+    public void onAppointmentScheduled(Appointment appointment) {
+        // Send immediate confirmation
+        studentRepository.findById(appointment.getStudentId()).ifPresent(student -> {
+            notificationService.sendAppointmentConfirmation(appointment, student);
+        });
+    }
+    
+    @Override
+    public void onAppointment24HoursBefore(Appointment appointment) {
+        // Send 24-hour reminder
+        studentRepository.findById(appointment.getStudentId()).ifPresent(student -> {
+            notificationService.sendReminder(appointment, student);
+        });
+    }
+}
+
+
+
+6. Factory Pattern for Object Creation
+
+// Factory for creating domain objects
+@Component
+public class DomainObjectFactory {
+    
+    public Appointment createAppointment(String studentId, String counsellorId,
+                                       LocalDateTime dateTime, String concern) {
+        return new Appointment(
+            generateId("APT"),
+            studentId,
+            counsellorId,
+            dateTime,
+            AppointmentStatus.SCHEDULED,
+            50,
+            concern
+        );
+    }
+    
+    public SessionNote createSessionNote(String appointmentId, String counsellorId, 
+                                       String content) {
+        return new SessionNote(
+            generateId("NOTE"),
+            appointmentId,
+            counsellorId,
+            content,
+            LocalDateTime.now()
+        );
+    }
+    
+    public TimeSlot createTimeSlot(String counsellorId, LocalDateTime startTime, 
+                                 LocalDateTime endTime) {
+        return new TimeSlot(
+            counsellorId,
+            startTime,
+            endTime,
+            true
+        );
+    }
+    
+    private String generateId(String prefix) {
+        return prefix + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+}
+
+
+
+7. Controller Layer (REST API)
+
+@RestController
+@RequestMapping("/api/appointments")
+public class AppointmentController {
+    
+    private final AppointmentService appointmentService;
+    
+    @Autowired
+    public AppointmentController(AppointmentService appointmentService) {
+        this.appointmentService = appointmentService;
+    }
+    
+    @PostMapping
+    public ResponseEntity<AppointmentResponse> bookAppointment(
+            @RequestBody AppointmentRequest request) {
+        try {
+            AppointmentResponse response = appointmentService.bookAppointment(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @DeleteMapping("/{appointmentId}")
+    public ResponseEntity<Void> cancelAppointment(
+            @PathVariable String appointmentId,
+            @RequestParam String studentId) {
+        try {
+            appointmentService.cancelAppointment(appointmentId, studentId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @GetMapping("/student/{studentId}")
+    public ResponseEntity<List<AppointmentResponse>> getStudentAppointments(
+            @PathVariable String studentId) {
+        // Implementation...
+        return ResponseEntity.ok(Collections.emptyList());
+    }
+}

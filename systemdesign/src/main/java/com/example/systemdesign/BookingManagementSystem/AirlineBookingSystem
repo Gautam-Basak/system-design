@@ -1,0 +1,770 @@
+Design Patterns Used:
+Factory Pattern - For creating different booking types
+
+Strategy Pattern - For payment methods and pricing strategies
+
+Observer Pattern - For notifications and booking status updates
+
+Repository Pattern - For data access abstraction
+
+Facade Pattern - For simplified booking interface
+
+Builder Pattern - For complex object creation (flights, bookings)
+
+Chain of Responsibility - For booking validation pipeline
+
+Core Functionalities:
+Flight Search & Availability
+
+Seat Selection & Management
+
+Booking Creation & Management
+
+Payment Processing
+
+Ticket Generation
+
+Cancellation & Refunds
+
+Notification System
+
+Loyalty Points Management
+
+
+1. Domain Models
+
+// Enums
+public enum BookingStatus {
+    PENDING, CONFIRMED, CANCELLED, CHECKED_IN, COMPLETED
+}
+
+public enum SeatClass {
+    ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST
+}
+
+public enum PaymentStatus {
+    PENDING, SUCCESSFUL, FAILED, REFUNDED
+}
+
+public enum PaymentMethod {
+    CREDIT_CARD, DEBIT_CARD, PAYPAL, WALLET
+}
+
+// Domain Entities
+public class Flight {
+    private String flightNumber;
+    private String airline;
+    private String departureAirport;
+    private String arrivalAirport;
+    private LocalDateTime departureTime;
+    private LocalDateTime arrivalTime;
+    private int totalSeats;
+    private Map<SeatClass, Double> basePrices;
+    private List<Seat> seats;
+    
+    // Builder Pattern implementation
+    public static class Builder {
+        private String flightNumber;
+        private String airline;
+        // ... other fields
+        
+        public Builder flightNumber(String flightNumber) {
+            this.flightNumber = flightNumber;
+            return this;
+        }
+        
+        public Flight build() {
+            return new Flight(this);
+        }
+    }
+    
+    private Flight(Builder builder) {
+        this.flightNumber = builder.flightNumber;
+        this.airline = builder.airline;
+        // ... other assignments
+    }
+    
+    // Getters and setters
+}
+
+public class Seat {
+    private String seatNumber;
+    private SeatClass seatClass;
+    private boolean isAvailable;
+    private double price;
+    private List<SeatFeature> features; // Window, Aisle, Extra Legroom
+    
+    // Getters and setters
+}
+
+public class Booking {
+    private String bookingId;
+    private String passengerId;
+    private String flightNumber;
+    private LocalDateTime bookingDate;
+    private BookingStatus status;
+    private List<Passenger> passengers;
+    private List<Seat> selectedSeats;
+    private double totalAmount;
+    private Payment payment;
+    private Ticket ticket;
+    
+    // Getters and setters
+}
+
+public class Passenger {
+    private String passengerId;
+    private String name;
+    private String email;
+    private String phone;
+    private Date dateOfBirth;
+    private String passportNumber;
+    private LoyaltyAccount loyaltyAccount;
+    
+    // Getters and setters
+}
+
+public class Payment {
+    private String paymentId;
+    private double amount;
+    private PaymentMethod method;
+    private PaymentStatus status;
+    private LocalDateTime paymentDate;
+    private String transactionId;
+    
+    // Getters and setters
+}
+
+public class Ticket {
+    private String ticketNumber;
+    private String bookingId;
+    private String passengerName;
+    private String flightNumber;
+    private LocalDateTime departureTime;
+    private String seatNumber;
+    private String qrCode;
+    
+    // Getters and setters
+}
+
+public class LoyaltyAccount {
+    private String accountId;
+    private String passengerId;
+    private int pointsBalance;
+    private String tier; // Silver, Gold, Platinum
+    private List<LoyaltyTransaction> transactions;
+    
+    // Getters and setters
+}
+
+
+
+2. Repository Pattern Implementation
+
+// Repository Interfaces
+public interface FlightRepository {
+    Optional<Flight> findByNumber(String flightNumber);
+    List<Flight> searchFlights(String departure, String arrival, LocalDate date);
+    List<Seat> findAvailableSeats(String flightNumber, SeatClass seatClass);
+    void updateSeatAvailability(String flightNumber, String seatNumber, boolean available);
+}
+
+public interface BookingRepository {
+    Optional<Booking> findById(String bookingId);
+    List<Booking> findByPassenger(String passengerId);
+    List<Booking> findByFlightAndDate(String flightNumber, LocalDate date);
+    Booking save(Booking booking);
+    void updateStatus(String bookingId, BookingStatus status);
+}
+
+public interface PassengerRepository {
+    Optional<Passenger> findById(String passengerId);
+    Optional<Passenger> findByEmail(String email);
+    Passenger save(Passenger passenger);
+}
+
+public interface PaymentRepository {
+    Payment save(Payment payment);
+    Optional<Payment> findByBookingId(String bookingId);
+    void updateStatus(String paymentId, PaymentStatus status);
+}
+
+
+
+3. Factory Pattern for Booking Types
+
+// Booking Factory
+@Component
+public class BookingFactory {
+    
+    public Booking createFlightBooking(Passenger passenger, Flight flight, 
+                                     List<Seat> selectedSeats) {
+        Booking booking = new Booking();
+        booking.setBookingId(generateBookingId());
+        booking.setPassengerId(passenger.getPassengerId());
+        booking.setFlightNumber(flight.getFlightNumber());
+        booking.setBookingDate(LocalDateTime.now());
+        booking.setStatus(BookingStatus.PENDING);
+        booking.setPassengers(List.of(passenger));
+        booking.setSelectedSeats(selectedSeats);
+        booking.setTotalAmount(calculateTotalAmount(flight, selectedSeats));
+        
+        return booking;
+    }
+    
+    public Booking createGroupBooking(List<Passenger> passengers, Flight flight,
+                                    Map<Passenger, Seat> passengerSeats) {
+        // Implementation for group booking
+        return null;
+    }
+    
+    private double calculateTotalAmount(Flight flight, List<Seat> seats) {
+        return seats.stream()
+            .mapToDouble(Seat::getPrice)
+            .sum();
+    }
+    
+    private String generateBookingId() {
+        return "BKG_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}
+
+
+
+4. Strategy Pattern for Payment & Pricing
+
+// Payment Strategy
+public interface PaymentStrategy {
+    PaymentResult processPayment(PaymentRequest request);
+    boolean supports(PaymentMethod method);
+}
+
+@Component
+public class CreditCardPaymentStrategy implements PaymentStrategy {
+    
+    @Override
+    public PaymentResult processPayment(PaymentRequest request) {
+        // Credit card processing logic
+        System.out.println("Processing credit card payment: " + request.getAmount());
+        
+        // Simulate payment processing
+        boolean success = Math.random() > 0.1; // 90% success rate
+        
+        return new PaymentResult(
+            success ? PaymentStatus.SUCCESSFUL : PaymentStatus.FAILED,
+            success ? "TXN_" + UUID.randomUUID() : null,
+            success ? "Payment successful" : "Payment failed"
+        );
+    }
+    
+    @Override
+    public boolean supports(PaymentMethod method) {
+        return method == PaymentMethod.CREDIT_CARD;
+    }
+}
+
+@Component
+public class PayPalPaymentStrategy implements PaymentStrategy {
+    
+    @Override
+    public PaymentResult processPayment(PaymentRequest request) {
+        // PayPal processing logic
+        System.out.println("Processing PayPal payment: " + request.getAmount());
+        return new PaymentResult(PaymentStatus.SUCCESSFUL, 
+                               "PP_" + UUID.randomUUID(), "PayPal payment successful");
+    }
+    
+    @Override
+    public boolean supports(PaymentMethod method) {
+        return method == PaymentMethod.PAYPAL;
+    }
+}
+
+// Pricing Strategy
+public interface PricingStrategy {
+    double calculatePrice(Flight flight, Seat seat, Passenger passenger);
+}
+
+@Component
+public class StandardPricingStrategy implements PricingStrategy {
+    
+    @Override
+    public double calculatePrice(Flight flight, Seat seat, Passenger passenger) {
+        double basePrice = flight.getBasePrices().get(seat.getSeatClass());
+        
+        // Apply seasonal pricing, demand-based pricing, etc.
+        return applyDynamicPricing(basePrice, flight.getDepartureTime());
+    }
+    
+    private double applyDynamicPricing(double basePrice, LocalDateTime departureTime) {
+        // Simple dynamic pricing based on days until departure
+        long daysUntilDeparture = ChronoUnit.DAYS.between(LocalDate.now(), departureTime.toLocalDate());
+        
+        if (daysUntilDeparture < 7) {
+            return basePrice * 1.5; // 50% increase for last-minute bookings
+        } else if (daysUntilDeparture > 60) {
+            return basePrice * 0.9; // 10% discount for early bookings
+        }
+        
+        return basePrice;
+    }
+}
+
+@Component
+public class LoyaltyPricingStrategy implements PricingStrategy {
+    
+    @Override
+    public double calculatePrice(Flight flight, Seat seat, Passenger passenger) {
+        double basePrice = flight.getBasePrices().get(seat.getSeatClass());
+        
+        // Apply loyalty discount
+        if (passenger.getLoyaltyAccount() != null) {
+            String tier = passenger.getLoyaltyAccount().getTier();
+            switch (tier) {
+                case "Gold": return basePrice * 0.9; // 10% discount
+                case "Platinum": return basePrice * 0.85; // 15% discount
+            }
+        }
+        
+        return basePrice;
+    }
+}
+
+
+
+5. Observer Pattern for Notifications
+
+
+// Observer Interface
+public interface BookingObserver {
+    void onBookingCreated(Booking booking);
+    void onBookingConfirmed(Booking booking);
+    void onBookingCancelled(Booking booking);
+    void onPaymentProcessed(Booking booking, Payment payment);
+}
+
+// Concrete Observers
+@Component
+public class EmailNotificationService implements BookingObserver {
+    
+    @Override
+    public void onBookingCreated(Booking booking) {
+        // Send booking confirmation email
+        System.out.println("Sending booking confirmation email for: " + booking.getBookingId());
+    }
+    
+    @Override
+    public void onBookingConfirmed(Booking booking) {
+        // Send ticket email
+        System.out.println("Sending e-ticket for: " + booking.getBookingId());
+    }
+    
+    @Override
+    public void onBookingCancelled(Booking booking) {
+        // Send cancellation email
+        System.out.println("Sending cancellation email for: " + booking.getBookingId());
+    }
+    
+    @Override
+    public void onPaymentProcessed(Booking booking, Payment payment) {
+        // Send payment confirmation
+        System.out.println("Sending payment confirmation for: " + booking.getBookingId());
+    }
+}
+
+@Component
+public class LoyaltyPointsService implements BookingObserver {
+    
+    private final LoyaltyRepository loyaltyRepository;
+    
+    @Autowired
+    public LoyaltyPointsService(LoyaltyRepository loyaltyRepository) {
+        this.loyaltyRepository = loyaltyRepository;
+    }
+    
+    @Override
+    public void onBookingConfirmed(Booking booking) {
+        // Award loyalty points
+        int points = (int) (booking.getTotalAmount() * 10); // 10 points per currency unit
+        
+        LoyaltyAccount account = booking.getPassengers().get(0).getLoyaltyAccount();
+        if (account != null) {
+            account.setPointsBalance(account.getPointsBalance() + points);
+            loyaltyRepository.save(account);
+            System.out.println("Awarded " + points + " loyalty points to " + account.getAccountId());
+        }
+    }
+    
+    @Override
+    public void onBookingCancelled(Booking booking) {
+        // Deduct loyalty points if booking was confirmed
+        // Implementation...
+    }
+}
+
+@Component
+public class InventoryManagementService implements BookingObserver {
+    
+    private final FlightRepository flightRepository;
+    
+    @Autowired
+    public InventoryManagementService(FlightRepository flightRepository) {
+        this.flightRepository = flightRepository;
+    }
+    
+    @Override
+    public void onBookingConfirmed(Booking booking) {
+        // Update seat inventory
+        booking.getSelectedSeats().forEach(seat -> {
+            flightRepository.updateSeatAvailability(
+                booking.getFlightNumber(), 
+                seat.getSeatNumber(), 
+                false
+            );
+        });
+    }
+    
+    @Override
+    public void onBookingCancelled(Booking booking) {
+        // Restore seat inventory
+        booking.getSelectedSeats().forEach(seat -> {
+            flightRepository.updateSeatAvailability(
+                booking.getFlightNumber(), 
+                seat.getSeatNumber(), 
+                true
+            );
+        });
+    }
+}
+
+
+
+6. Facade Pattern for Simplified Booking
+
+// Booking Facade
+@Service
+public class BookingFacade {
+    
+    private final FlightSearchService flightSearchService;
+    private final SeatSelectionService seatSelectionService;
+    private final BookingService bookingService;
+    private final PaymentService paymentService;
+    private final NotificationService notificationService;
+    
+    @Autowired
+    public BookingFacade(FlightSearchService flightSearchService,
+                        SeatSelectionService seatSelectionService,
+                        BookingService bookingService,
+                        PaymentService paymentService,
+                        NotificationService notificationService) {
+        this.flightSearchService = flightSearchService;
+        this.seatSelectionService = seatSelectionService;
+        this.bookingService = bookingService;
+        this.paymentService = paymentService;
+        this.notificationService = notificationService;
+    }
+    
+    public BookingResult completeBooking(BookingRequest request) {
+        try {
+            // Step 1: Validate flight and seat availability
+            Flight flight = flightSearchService.validateFlight(request.getFlightNumber());
+            List<Seat> availableSeats = seatSelectionService.validateSeats(
+                request.getFlightNumber(), request.getSelectedSeatNumbers());
+            
+            // Step 2: Create booking
+            Booking booking = bookingService.createBooking(
+                request.getPassenger(), flight, availableSeats);
+            
+            // Step 3: Process payment
+            PaymentResult paymentResult = paymentService.processPayment(
+                booking, request.getPaymentMethod(), request.getPaymentDetails());
+            
+            // Step 4: Confirm booking
+            if (paymentResult.getStatus() == PaymentStatus.SUCCESSFUL) {
+                bookingService.confirmBooking(booking.getBookingId());
+                notificationService.sendBookingConfirmation(booking);
+                
+                return new BookingResult(true, "Booking confirmed", booking.getBookingId());
+            } else {
+                bookingService.cancelBooking(booking.getBookingId());
+                return new BookingResult(false, "Payment failed: " + paymentResult.getMessage(), null);
+            }
+            
+        } catch (Exception e) {
+            return new BookingResult(false, e.getMessage(), null);
+        }
+    }
+}
+
+
+
+7. Chain of Responsibility for Validation
+
+// Validation Chain
+public abstract class BookingValidator {
+    protected BookingValidator next;
+    
+    public BookingValidator setNext(BookingValidator next) {
+        this.next = next;
+        return next;
+    }
+    
+    public abstract ValidationResult validate(Booking booking);
+    
+    protected ValidationResult checkNext(Booking booking) {
+        if (next == null) {
+            return new ValidationResult(true, "All validations passed");
+        }
+        return next.validate(booking);
+    }
+}
+
+@Component
+public class SeatAvailabilityValidator extends BookingValidator {
+    
+    private final FlightRepository flightRepository;
+    
+    @Override
+    public ValidationResult validate(Booking booking) {
+        for (Seat seat : booking.getSelectedSeats()) {
+            if (!seat.isAvailable()) {
+                return new ValidationResult(false, "Seat " + seat.getSeatNumber() + " is not available");
+            }
+        }
+        return checkNext(booking);
+    }
+}
+
+@Component
+public class PassengerValidator extends BookingValidator {
+    
+    @Override
+    public ValidationResult validate(Booking booking) {
+        for (Passenger passenger : booking.getPassengers()) {
+            if (passenger.getPassportNumber() == null || passenger.getPassportNumber().isEmpty()) {
+                return new ValidationResult(false, "Passport number required for " + passenger.getName());
+            }
+        }
+        return checkNext(booking);
+    }
+}
+
+@Component
+public class PaymentValidator extends BookingValidator {
+    
+    @Override
+    public ValidationResult validate(Booking booking) {
+        if (booking.getTotalAmount() <= 0) {
+            return new ValidationResult(false, "Invalid booking amount");
+        }
+        return checkNext(booking);
+    }
+}
+
+// Validation Service
+@Service
+public class BookingValidationService {
+    
+    private BookingValidator validationChain;
+    
+    @Autowired
+    public BookingValidationService(SeatAvailabilityValidator seatValidator,
+                                  PassengerValidator passengerValidator,
+                                  PaymentValidator paymentValidator) {
+        // Build the chain
+        this.validationChain = seatValidator;
+        seatValidator.setNext(passengerValidator)
+                    .setNext(paymentValidator);
+    }
+    
+    public ValidationResult validateBooking(Booking booking) {
+        return validationChain.validate(booking);
+    }
+}
+
+
+
+8. Main Service Classes
+
+@Service
+public class BookingService {
+    
+    private final BookingRepository bookingRepository;
+    private final BookingFactory bookingFactory;
+    private final BookingValidationService validationService;
+    private final List<BookingObserver> observers;
+    
+    @Autowired
+    public BookingService(BookingRepository bookingRepository,
+                         BookingFactory bookingFactory,
+                         BookingValidationService validationService,
+                         List<BookingObserver> observers) {
+        this.bookingRepository = bookingRepository;
+        this.bookingFactory = bookingFactory;
+        this.validationService = validationService;
+        this.observers = observers;
+    }
+    
+    public Booking createBooking(Passenger passenger, Flight flight, List<Seat> seats) {
+        Booking booking = bookingFactory.createFlightBooking(passenger, flight, seats);
+        
+        // Validate booking
+        ValidationResult validation = validationService.validateBooking(booking);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException(validation.getMessage());
+        }
+        
+        Booking savedBooking = bookingRepository.save(booking);
+        
+        // Notify observers
+        observers.forEach(observer -> observer.onBookingCreated(savedBooking));
+        
+        return savedBooking;
+    }
+    
+    public void confirmBooking(String bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+        
+        // Generate ticket
+        generateTicket(booking);
+        
+        // Notify observers
+        observers.forEach(observer -> observer.onBookingConfirmed(booking));
+    }
+    
+    public void cancelBooking(String bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+        
+        // Notify observers
+        observers.forEach(observer -> observer.onBookingCancelled(booking));
+    }
+    
+    private void generateTicket(Booking booking) {
+        Ticket ticket = new Ticket();
+        ticket.setTicketNumber("TKT_" + UUID.randomUUID().toString().substring(0, 8));
+        ticket.setBookingId(booking.getBookingId());
+        ticket.setPassengerName(booking.getPassengers().get(0).getName());
+        ticket.setFlightNumber(booking.getFlightNumber());
+        ticket.setSeatNumber(booking.getSelectedSeats().get(0).getSeatNumber());
+        ticket.setQrCode(generateQRCode(ticket.getTicketNumber()));
+        
+        booking.setTicket(ticket);
+    }
+    
+    private String generateQRCode(String ticketNumber) {
+        // QR code generation logic
+        return "QR_CODE_" + ticketNumber;
+    }
+}
+
+@Service
+public class PaymentService {
+    
+    private final List<PaymentStrategy> paymentStrategies;
+    private final PaymentRepository paymentRepository;
+    private final List<BookingObserver> observers;
+    
+    @Autowired
+    public PaymentService(List<PaymentStrategy> paymentStrategies,
+                        PaymentRepository paymentRepository,
+                        List<BookingObserver> observers) {
+        this.paymentStrategies = paymentStrategies;
+        this.paymentRepository = paymentRepository;
+        this.observers = observers;
+    }
+    
+    public PaymentResult processPayment(Booking booking, PaymentMethod method, 
+                                      Map<String, String> paymentDetails) {
+        PaymentStrategy strategy = paymentStrategies.stream()
+            .filter(s -> s.supports(method))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Unsupported payment method: " + method));
+        
+        PaymentRequest request = new PaymentRequest(
+            booking.getTotalAmount(),
+            method,
+            paymentDetails
+        );
+        
+        PaymentResult result = strategy.processPayment(request);
+        
+        // Save payment record
+        Payment payment = createPayment(booking, result);
+        paymentRepository.save(payment);
+        
+        // Notify observers
+        observers.forEach(observer -> observer.onPaymentProcessed(booking, payment));
+        
+        return result;
+    }
+    
+    private Payment createPayment(Booking booking, PaymentResult result) {
+        Payment payment = new Payment();
+        payment.setPaymentId("PAY_" + UUID.randomUUID().toString().substring(0, 8));
+        payment.setAmount(booking.getTotalAmount());
+        payment.setStatus(result.getStatus());
+        payment.setTransactionId(result.getTransactionId());
+        payment.setPaymentDate(LocalDateTime.now());
+        return payment;
+    }
+}
+
+
+
+9. REST Controllers
+
+@RestController
+@RequestMapping("/api/bookings")
+public class BookingController {
+    
+    private final BookingFacade bookingFacade;
+    private final FlightSearchService flightSearchService;
+    
+    @Autowired
+    public BookingController(BookingFacade bookingFacade, 
+                           FlightSearchService flightSearchService) {
+        this.bookingFacade = bookingFacade;
+        this.flightSearchService = flightSearchService;
+    }
+    
+    @GetMapping("/search")
+    public ResponseEntity<List<Flight>> searchFlights(
+            @RequestParam String departure,
+            @RequestParam String arrival,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        
+        List<Flight> flights = flightSearchService.searchFlights(departure, arrival, date);
+        return ResponseEntity.ok(flights);
+    }
+    
+    @PostMapping
+    public ResponseEntity<BookingResult> createBooking(@RequestBody BookingRequest request) {
+        BookingResult result = bookingFacade.completeBooking(request);
+        
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
+        }
+    }
+    
+    @DeleteMapping("/{bookingId}")
+    public ResponseEntity<String> cancelBooking(@PathVariable String bookingId) {
+        // Implementation
+        return ResponseEntity.ok("Booking cancelled successfully");
+    }
+    
+    @GetMapping("/{bookingId}")
+    public ResponseEntity<Booking> getBooking(@PathVariable String bookingId) {
+        // Implementation
+        return ResponseEntity.ok().build();
+    }
+}
