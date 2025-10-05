@@ -1,0 +1,1203 @@
+
+Design Patterns Used:
+Strategy Pattern - Pricing strategies, discount strategies
+
+Factory Pattern - Different room types, booking types
+
+Observer Pattern - Notifications, inventory updates
+
+Repository Pattern - Data access abstraction
+
+Specification Pattern - Room search and filtering
+
+Decorator Pattern - Adding amenities to bookings
+
+Chain of Responsibility - Booking validation
+
+Core Functionalities:
+Hotel & Room Management
+
+Room Availability & Search
+
+Booking Creation & Management
+
+Dynamic Pricing & Offers
+
+Multi-guest Management
+
+Amenities & Services
+
+Check-in/Check-out Management
+
+Payment & Invoice Generation
+
+
+1. Domain Models
+java
+// Enums
+public enum RoomType {
+    STANDARD, DELUXE, SUITE, EXECUTIVE_SUITE, PRESIDENTIAL_SUITE
+}
+
+public enum BookingStatus {
+    PENDING, CONFIRMED, CHECKED_IN, CHECKED_OUT, CANCELLED, NO_SHOW
+}
+
+public enum BedType {
+    SINGLE, DOUBLE, QUEEN, KING, TWIN
+}
+
+public enum AmenityType {
+    POOL, SPA, GYM, BREAKFAST, WIFI, PARKING, ROOM_SERVICE
+}
+
+// Domain Entities
+public class Hotel {
+    private String hotelId;
+    private String name;
+    private String address;
+    private String city;
+    private String country;
+    private Double rating;
+    private List<Room> rooms;
+    private List<Amenity> amenities;
+    private ContactInfo contactInfo;
+    
+    // Getters and setters
+}
+
+public class Room {
+    private String roomId;
+    private String roomNumber;
+    private RoomType roomType;
+    private int capacity;
+    private List<BedType> bedTypes;
+    private double basePrice;
+    private List<Amenity> roomAmenities;
+    private List<RoomUnavailablePeriod> unavailablePeriods;
+    
+    // Getters and setters
+}
+
+public class RoomUnavailablePeriod {
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private String reason; // Maintenance, Renovation, etc.
+}
+
+public class Booking {
+    private String bookingId;
+    private String hotelId;
+    private String guestId;
+    private List<Guest> guests;
+    private List<Room> rooms;
+    private LocalDate checkInDate;
+    private LocalDate checkOutDate;
+    private int numberOfNights;
+    private BookingStatus status;
+    private double totalAmount;
+    private double taxes;
+    private double discount;
+    private double finalAmount;
+    private List<Amenity> selectedAmenities;
+    private Payment payment;
+    private String specialRequests;
+    
+    // Getters and setters
+}
+
+public class Guest {
+    private String guestId;
+    private String name;
+    private String email;
+    private String phone;
+    private String idType; // Passport, Driver's License
+    private String idNumber;
+    private Date dateOfBirth;
+    private LoyaltyAccount loyaltyAccount;
+    
+    // Getters and setters
+}
+
+public class Amenity {
+    private String amenityId;
+    private AmenityType type;
+    private String name;
+    private String description;
+    private double price;
+    private boolean included; // Whether included in room price
+    
+    // Getters and setters
+}
+
+public class PricingRule {
+    private String ruleId;
+    private String hotelId;
+    private RoomType roomType;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private double priceMultiplier;
+    private double fixedPrice;
+    private String ruleType; // SEASONAL, WEEKEND, SPECIAL_EVENT
+    
+    // Getters and setters
+}
+
+
+
+1. Strategy Pattern - Pricing & Discount Strategies
+java
+// Pricing Strategy Interface
+public interface PricingStrategy {
+    double calculatePrice(Room room, LocalDate checkIn, LocalDate checkOut, 
+                         int numberOfGuests, List<Amenity> amenities);
+    String getStrategyName();
+}
+
+// Seasonal Pricing Strategy
+@Component
+public class SeasonalPricingStrategy implements PricingStrategy {
+    @Override
+    public double calculatePrice(Room room, LocalDate checkIn, LocalDate checkOut,
+                               int numberOfGuests, List<Amenity> amenities) {
+        double basePrice = room.getBasePrice();
+        double total = 0;
+        
+        for (LocalDate date = checkIn; date.isBefore(checkOut); date = date.plusDays(1)) {
+            double dailyPrice = applySeasonalMultiplier(basePrice, date);
+            total += dailyPrice;
+        }
+        
+        return total + calculateAmenitiesCost(amenities, checkIn, checkOut);
+    }
+    
+    private double applySeasonalMultiplier(double basePrice, LocalDate date) {
+        if (date.getMonthValue() >= 6 && date.getMonthValue() <= 8) {
+            return basePrice * 1.3; // Summer premium
+        }
+        if (date.getMonthValue() == 12) {
+            return basePrice * 1.5; // Christmas premium
+        }
+        return basePrice;
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Seasonal Pricing";
+    }
+}
+
+// Weekend Pricing Strategy
+@Component
+public class WeekendPricingStrategy implements PricingStrategy {
+    @Override
+    public double calculatePrice(Room room, LocalDate checkIn, LocalDate checkOut,
+                               int numberOfGuests, List<Amenity> amenities) {
+        double total = 0;
+        
+        for (LocalDate date = checkIn; date.isBefore(checkOut); date = date.plusDays(1)) {
+            double dailyPrice = room.getBasePrice();
+            DayOfWeek day = date.getDayOfWeek();
+            if (day == DayOfWeek.FRIDAY || day == DayOfWeek.SATURDAY) {
+                dailyPrice *= 1.2; // Weekend surcharge
+            }
+            total += dailyPrice;
+        }
+        
+        return total + calculateAmenitiesCost(amenities, checkIn, checkOut);
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Weekend Pricing";
+    }
+}
+
+// Discount Strategy Interface
+public interface DiscountStrategy {
+    double applyDiscount(double originalPrice, Booking booking);
+    String getDiscountName();
+}
+
+// Early Bird Discount Strategy
+@Component
+public class EarlyBirdDiscountStrategy implements DiscountStrategy {
+    @Override
+    public double applyDiscount(double originalPrice, Booking booking) {
+        long daysInAdvance = ChronoUnit.DAYS.between(LocalDate.now(), booking.getCheckInDate());
+        if (daysInAdvance >= 30) {
+            return originalPrice * 0.85; // 15% discount
+        } else if (daysInAdvance >= 14) {
+            return originalPrice * 0.90; // 10% discount
+        }
+        return originalPrice;
+    }
+    
+    @Override
+    public String getDiscountName() {
+        return "Early Bird Discount";
+    }
+}
+
+// Loyalty Discount Strategy
+@Component
+public class LoyaltyDiscountStrategy implements DiscountStrategy {
+    @Override
+    public double applyDiscount(double originalPrice, Booking booking) {
+        Guest mainGuest = booking.getGuests().get(0);
+        if (mainGuest.getLoyaltyAccount() != null) {
+            String tier = mainGuest.getLoyaltyAccount().getTier();
+            switch (tier) {
+                case "PLATINUM": return originalPrice * 0.80; // 20% discount
+                case "GOLD": return originalPrice * 0.85; // 15% discount
+                case "SILVER": return originalPrice * 0.90; // 10% discount
+            }
+        }
+        return originalPrice;
+    }
+    
+    @Override
+    public String getDiscountName() {
+        return "Loyalty Discount";
+    }
+}
+
+// Pricing Context
+@Service
+public class PricingContext {
+    private final List<PricingStrategy> pricingStrategies;
+    private final List<DiscountStrategy> discountStrategies;
+    
+    @Autowired
+    public PricingContext(List<PricingStrategy> pricingStrategies,
+                         List<DiscountStrategy> discountStrategies) {
+        this.pricingStrategies = pricingStrategies;
+        this.discountStrategies = discountStrategies;
+    }
+    
+    public double calculateFinalPrice(Booking booking) {
+        Room room = booking.getRooms().get(0);
+        
+        // Apply pricing strategy
+        double basePrice = pricingStrategies.get(0).calculatePrice(
+            room, booking.getCheckInDate(), booking.getCheckOutDate(),
+            booking.getGuests().size(), booking.getSelectedAmenities()
+        );
+        
+        // Apply all applicable discounts
+        double discountedPrice = basePrice;
+        for (DiscountStrategy discount : discountStrategies) {
+            discountedPrice = discount.applyDiscount(discountedPrice, booking);
+        }
+        
+        return discountedPrice;
+    }
+}
+2. Factory Pattern - Room Types & Booking Types
+java
+// Room Factory
+@Component
+public class RoomFactory {
+    
+    public Room createRoom(RoomType type, String roomNumber, double basePrice) {
+        switch (type) {
+            case STANDARD:
+                return createStandardRoom(roomNumber, basePrice);
+            case DELUXE:
+                return createDeluxeRoom(roomNumber, basePrice);
+            case SUITE:
+                return createSuite(roomNumber, basePrice);
+            case EXECUTIVE_SUITE:
+                return createExecutiveSuite(roomNumber, basePrice);
+            default:
+                throw new IllegalArgumentException("Unknown room type: " + type);
+        }
+    }
+    
+    private Room createStandardRoom(String roomNumber, double basePrice) {
+        Room room = new Room();
+        room.setRoomId(generateRoomId());
+        room.setRoomNumber(roomNumber);
+        room.setRoomType(RoomType.STANDARD);
+        room.setCapacity(2);
+        room.setBasePrice(basePrice);
+        room.setBedTypes(Arrays.asList(BedType.QUEEN));
+        room.setRoomAmenities(Arrays.asList(
+            new Amenity("AMN001", "WiFi", "Free WiFi", 0.0, true),
+            new Amenity("AMN002", "TV", "Flat screen TV", 0.0, true)
+        ));
+        return room;
+    }
+    
+    private Room createDeluxeRoom(String roomNumber, double basePrice) {
+        Room room = new Room();
+        room.setRoomId(generateRoomId());
+        room.setRoomNumber(roomNumber);
+        room.setRoomType(RoomType.DELUXE);
+        room.setCapacity(3);
+        room.setBasePrice(basePrice * 1.3);
+        room.setBedTypes(Arrays.asList(BedType.KING));
+        room.setRoomAmenities(Arrays.asList(
+            new Amenity("AMN001", "WiFi", "Free WiFi", 0.0, true),
+            new Amenity("AMN003", "Minibar", "Stocked minibar", 0.0, false)
+        ));
+        return room;
+    }
+    
+    private Room createSuite(String roomNumber, double basePrice) {
+        Room room = new Room();
+        room.setRoomId(generateRoomId());
+        room.setRoomNumber(roomNumber);
+        room.setRoomType(RoomType.SUITE);
+        room.setCapacity(4);
+        room.setBasePrice(basePrice * 1.8);
+        room.setBedTypes(Arrays.asList(BedType.KING, BedType.SINGLE));
+        room.setRoomAmenities(Arrays.asList(
+            new Amenity("AMN004", "Jacuzzi", "In-room jacuzzi", 0.0, true),
+            new Amenity("AMN005", "Balcony", "Private balcony", 0.0, true)
+        ));
+        return room;
+    }
+    
+    private String generateRoomId() {
+        return "RM_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+}
+
+// Booking Factory
+@Component
+public class BookingFactory {
+    
+    public HotelBooking createBooking(BookingType type, BookingRequest request) {
+        switch (type) {
+            case INDIVIDUAL:
+                return createIndividualBooking(request);
+            case GROUP:
+                return createGroupBooking(request);
+            case CORPORATE:
+                return createCorporateBooking(request);
+            case FAMILY:
+                return createFamilyBooking(request);
+            default:
+                throw new IllegalArgumentException("Unknown booking type: " + type);
+        }
+    }
+    
+    private IndividualBooking createIndividualBooking(BookingRequest request) {
+        IndividualBooking booking = new IndividualBooking();
+        initializeCommonFields(booking, request);
+        booking.setBusinessTravel(request.isBusinessTravel());
+        booking.setSpecialRequests(request.getSpecialRequests());
+        return booking;
+    }
+    
+    private GroupBooking createGroupBooking(BookingRequest request) {
+        GroupBooking booking = new GroupBooking();
+        initializeCommonFields(booking, request);
+        booking.setGroupName(request.getGroupName());
+        booking.setGroupSize(request.getGuests().size());
+        booking.setGroupDiscount(calculateGroupDiscount(request.getGuests().size()));
+        return booking;
+    }
+    
+    private CorporateBooking createCorporateBooking(BookingRequest request) {
+        CorporateBooking booking = new CorporateBooking();
+        initializeCommonFields(booking, request);
+        booking.setCorporateAccountId(request.getCorporateAccountId());
+        booking.setCompanyName(request.getCompanyName());
+        booking.setCorporateDiscount(0.15); // 15% corporate discount
+        return booking;
+    }
+    
+    private FamilyBooking createFamilyBooking(BookingRequest request) {
+        FamilyBooking booking = new FamilyBooking();
+        initializeCommonFields(booking, request);
+        booking.setChildrenCount((int) request.getGuests().stream()
+            .filter(g -> ChronoUnit.YEARS.between(g.getDateOfBirth().toInstant()
+                .atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now()) < 18)
+            .count());
+        return booking;
+    }
+    
+    private void initializeCommonFields(HotelBooking booking, BookingRequest request) {
+        booking.setBookingId(generateBookingId());
+        booking.setHotelId(request.getHotelId());
+        booking.setGuests(request.getGuests());
+        booking.setRooms(request.getRooms());
+        booking.setCheckInDate(request.getCheckInDate());
+        booking.setCheckOutDate(request.getCheckOutDate());
+        booking.setStatus(BookingStatus.PENDING);
+        booking.setSelectedAmenities(request.getSelectedAmenities());
+    }
+    
+    private double calculateGroupDiscount(int groupSize) {
+        if (groupSize >= 20) return 0.20;
+        if (groupSize >= 10) return 0.15;
+        if (groupSize >= 5) return 0.10;
+        return 0.0;
+    }
+    
+    private String generateBookingId() {
+        return "HTL_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}
+3. Observer Pattern - Notifications & Inventory Updates
+java
+// Observer Interface
+public interface BookingObserver {
+    void onBookingCreated(HotelBooking booking);
+    void onBookingConfirmed(HotelBooking booking);
+    void onBookingCancelled(HotelBooking booking);
+    void onCheckIn(String bookingId);
+    void onCheckOut(String bookingId);
+    void onPaymentProcessed(HotelBooking booking, Payment payment);
+}
+
+// Concrete Observers
+@Component
+public class EmailNotificationService implements BookingObserver {
+    
+    @Override
+    public void onBookingCreated(HotelBooking booking) {
+        String recipient = booking.getGuests().get(0).getEmail();
+        String subject = "Booking Confirmation - " + booking.getBookingId();
+        String message = String.format(
+            "Dear %s, your booking has been created. Check-in: %s, Check-out: %s",
+            booking.getGuests().get(0).getName(),
+            booking.getCheckInDate(),
+            booking.getCheckOutDate()
+        );
+        sendEmail(recipient, subject, message);
+    }
+    
+    @Override
+    public void onBookingConfirmed(HotelBooking booking) {
+        // Send confirmation email with details
+    }
+    
+    @Override
+    public void onBookingCancelled(HotelBooking booking) {
+        // Send cancellation email
+    }
+    
+    @Override
+    public void onCheckIn(String bookingId) {
+        // Send check-in confirmation
+    }
+    
+    @Override
+    public void onCheckOut(String bookingId) {
+        // Send thank you email with invoice
+    }
+    
+    @Override
+    public void onPaymentProcessed(HotelBooking booking, Payment payment) {
+        // Send payment confirmation
+    }
+    
+    private void sendEmail(String recipient, String subject, String message) {
+        System.out.println("Sending email to: " + recipient);
+        System.out.println("Subject: " + subject);
+        System.out.println("Message: " + message);
+    }
+}
+
+@Component
+public class InventoryManagementService implements BookingObserver {
+    private final RoomRepository roomRepository;
+    
+    @Autowired
+    public InventoryManagementService(RoomRepository roomRepository) {
+        this.roomRepository = roomRepository;
+    }
+    
+    @Override
+    public void onBookingConfirmed(HotelBooking booking) {
+        // Mark rooms as booked for the duration
+        booking.getRooms().forEach(room -> {
+            markRoomUnavailable(room.getRoomId(), 
+                booking.getCheckInDate(), booking.getCheckOutDate(), "BOOKED");
+        });
+    }
+    
+    @Override
+    public void onBookingCancelled(HotelBooking booking) {
+        // Mark rooms as available again
+        booking.getRooms().forEach(room -> {
+            markRoomAvailable(room.getRoomId(), 
+                booking.getCheckInDate(), booking.getCheckOutDate());
+        });
+    }
+    
+    @Override
+    public void onCheckIn(String bookingId) {
+        // Update room status to OCCUPIED
+    }
+    
+    @Override
+    public void onCheckOut(String bookingId) {
+        // Update room status to AVAILABLE and trigger cleaning
+    }
+    
+    private void markRoomUnavailable(String roomId, LocalDate start, LocalDate end, String reason) {
+        // Implementation to update room availability
+    }
+    
+    private void markRoomAvailable(String roomId, LocalDate start, LocalDate end) {
+        // Implementation to restore room availability
+    }
+}
+
+@Component
+public class LoyaltyPointsService implements BookingObserver {
+    private final LoyaltyRepository loyaltyRepository;
+    
+    @Autowired
+    public LoyaltyPointsService(LoyaltyRepository loyaltyRepository) {
+        this.loyaltyRepository = loyaltyRepository;
+    }
+    
+    @Override
+    public void onBookingConfirmed(HotelBooking booking) {
+        Guest mainGuest = booking.getGuests().get(0);
+        if (mainGuest.getLoyaltyAccount() != null) {
+            int pointsEarned = (int) (booking.getTotalAmount() * 10); // 10 points per currency unit
+            awardLoyaltyPoints(mainGuest.getLoyaltyAccount(), pointsEarned, "Booking: " + booking.getBookingId());
+        }
+    }
+    
+    @Override
+    public void onCheckOut(String bookingId) {
+        // Award bonus points for completed stay
+    }
+    
+    private void awardLoyaltyPoints(LoyaltyAccount account, int points, String reason) {
+        account.setPointsBalance(account.getPointsBalance() + points);
+        loyaltyRepository.save(account);
+        System.out.println("Awarded " + points + " points to " + account.getAccountId());
+    }
+}
+
+// Observable Subject
+@Service
+public class BookingNotifier {
+    private final List<BookingObserver> observers = new ArrayList<>();
+    
+    @Autowired
+    public BookingNotifier(List<BookingObserver> observers) {
+        this.observers.addAll(observers);
+    }
+    
+    public void addObserver(BookingObserver observer) {
+        observers.add(observer);
+    }
+    
+    public void notifyBookingCreated(HotelBooking booking) {
+        observers.forEach(observer -> observer.onBookingCreated(booking));
+    }
+    
+    public void notifyBookingConfirmed(HotelBooking booking) {
+        observers.forEach(observer -> observer.onBookingConfirmed(booking));
+    }
+    
+    public void notifyBookingCancelled(HotelBooking booking) {
+        observers.forEach(observer -> observer.onBookingCancelled(booking));
+    }
+    
+    public void notifyCheckIn(String bookingId) {
+        observers.forEach(observer -> observer.onCheckIn(bookingId));
+    }
+    
+    public void notifyCheckOut(String bookingId) {
+        observers.forEach(observer -> observer.onCheckOut(bookingId));
+    }
+    
+    public void notifyPaymentProcessed(HotelBooking booking, Payment payment) {
+        observers.forEach(observer -> observer.onPaymentProcessed(booking, payment));
+    }
+}
+4. Repository Pattern - Data Access Abstraction
+java
+// Repository Interfaces
+public interface HotelRepository {
+    Optional<Hotel> findById(String hotelId);
+    List<Hotel> findByCity(String city);
+    List<Hotel> findByCriteria(SearchCriteria criteria);
+    Hotel save(Hotel hotel);
+}
+
+public interface RoomRepository {
+    Optional<Room> findById(String roomId);
+    List<Room> findByHotelId(String hotelId);
+    List<Room> findByHotelIdAndType(String hotelId, RoomType roomType);
+    List<Room> findAvailableRooms(String hotelId, LocalDate checkIn, LocalDate checkOut);
+    Room save(Room room);
+    void updateAvailability(String roomId, LocalDate date, boolean available);
+}
+
+public interface BookingRepository {
+    Optional<HotelBooking> findById(String bookingId);
+    List<HotelBooking> findByGuestEmail(String email);
+    List<HotelBooking> findByHotelAndDateRange(String hotelId, LocalDate start, LocalDate end);
+    List<HotelBooking> findByStatus(BookingStatus status);
+    HotelBooking save(HotelBooking booking);
+    void updateStatus(String bookingId, BookingStatus status);
+}
+
+public interface GuestRepository {
+    Optional<Guest> findById(String guestId);
+    Optional<Guest> findByEmail(String email);
+    Guest save(Guest guest);
+}
+
+// JPA Implementation Example
+@Repository
+public class JpaBookingRepository implements BookingRepository {
+    @PersistenceContext
+    private EntityManager entityManager;
+    
+    @Override
+    public Optional<HotelBooking> findById(String bookingId) {
+        return Optional.ofNullable(entityManager.find(HotelBooking.class, bookingId));
+    }
+    
+    @Override
+    public List<HotelBooking> findByGuestEmail(String email) {
+        return entityManager.createQuery(
+            "SELECT b FROM HotelBooking b JOIN b.guests g WHERE g.email = :email", HotelBooking.class)
+            .setParameter("email", email)
+            .getResultList();
+    }
+    
+    @Override
+    public HotelBooking save(HotelBooking booking) {
+        if (booking.getBookingId() == null) {
+            entityManager.persist(booking);
+            return booking;
+        } else {
+            return entityManager.merge(booking);
+        }
+    }
+}
+5. Specification Pattern - Room Search & Filtering
+java
+// Enhanced Specification Interface
+public interface RoomSpecification {
+    boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut);
+    String getDescription();
+}
+
+// Concrete Specifications
+public class RoomTypeSpecification implements RoomSpecification {
+    private final RoomType requiredType;
+    
+    public RoomTypeSpecification(RoomType type) {
+        this.requiredType = type;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return room.getRoomType() == requiredType;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Room type: " + requiredType;
+    }
+}
+
+public class CapacitySpecification implements RoomSpecification {
+    private final int minCapacity;
+    private final int maxCapacity;
+    
+    public CapacitySpecification(int minCapacity, int maxCapacity) {
+        this.minCapacity = minCapacity;
+        this.maxCapacity = maxCapacity;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return room.getCapacity() >= minCapacity && room.getCapacity() <= maxCapacity;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Capacity between " + minCapacity + " and " + maxCapacity;
+    }
+}
+
+public class AvailabilitySpecification implements RoomSpecification {
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return room.getUnavailablePeriods().stream()
+            .noneMatch(unavailable -> isOverlapping(unavailable, checkIn, checkOut));
+    }
+    
+    private boolean isOverlapping(RoomUnavailablePeriod unavailable, 
+                                 LocalDate checkIn, LocalDate checkOut) {
+        return !checkOut.isBefore(unavailable.getStartDate()) && 
+               !checkIn.isAfter(unavailable.getEndDate());
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Available for selected dates";
+    }
+}
+
+public class AmenitySpecification implements RoomSpecification {
+    private final List<String> requiredAmenities;
+    
+    public AmenitySpecification(List<String> amenities) {
+        this.requiredAmenities = amenities;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return room.getRoomAmenities().stream()
+            .map(Amenity::getName)
+            .collect(Collectors.toList())
+            .containsAll(requiredAmenities);
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Includes amenities: " + String.join(", ", requiredAmenities);
+    }
+}
+
+// Composite Specifications
+public class AndSpecification implements RoomSpecification {
+    private final List<RoomSpecification> specifications;
+    
+    public AndSpecification(List<RoomSpecification> specifications) {
+        this.specifications = specifications;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return specifications.stream()
+            .allMatch(spec -> spec.isSatisfiedBy(room, checkIn, checkOut));
+    }
+    
+    @Override
+    public String getDescription() {
+        return specifications.stream()
+            .map(RoomSpecification::getDescription)
+            .collect(Collectors.joining(" AND "));
+    }
+}
+
+// Specification Builder
+public class RoomSpecificationBuilder {
+    private List<RoomSpecification> specifications = new ArrayList<>();
+    
+    public RoomSpecificationBuilder withType(RoomType type) {
+        specifications.add(new RoomTypeSpecification(type));
+        return this;
+    }
+    
+    public RoomSpecificationBuilder withCapacity(int min, int max) {
+        specifications.add(new CapacitySpecification(min, max));
+        return this;
+    }
+    
+    public RoomSpecificationBuilder withAmenities(List<String> amenities) {
+        specifications.add(new AmenitySpecification(amenities));
+        return this;
+    }
+    
+    public RoomSpecificationBuilder availableBetween(LocalDate checkIn, LocalDate checkOut) {
+        specifications.add(new AvailabilitySpecification());
+        return this;
+    }
+    
+    public RoomSpecification build() {
+        return new AndSpecification(specifications);
+    }
+}
+
+// Specification Service
+@Service
+public class RoomSearchService {
+    private final RoomRepository roomRepository;
+    
+    @Autowired
+    public RoomSearchService(RoomRepository roomRepository) {
+        this.roomRepository = roomRepository;
+    }
+    
+    public List<Room> searchRooms(SearchRequest request) {
+        RoomSpecification spec = new RoomSpecificationBuilder()
+            .withType(request.getRoomType())
+            .withCapacity(request.getGuestCount(), request.getGuestCount() + 2)
+            .withAmenities(request.getRequiredAmenities())
+            .availableBetween(request.getCheckInDate(), request.getCheckOutDate())
+            .build();
+        
+        List<Room> allRooms = roomRepository.findByHotelId(request.getHotelId());
+        return allRooms.stream()
+            .filter(room -> spec.isSatisfiedBy(room, request.getCheckInDate(), request.getCheckOutDate()))
+            .collect(Collectors.toList());
+    }
+}
+6. Decorator Pattern - Adding Amenities to Bookings
+java
+// Booking Decorator Base Class
+public abstract class BookingDecorator extends HotelBooking {
+    protected HotelBooking decoratedBooking;
+    
+    public BookingDecorator(HotelBooking booking) {
+        this.decoratedBooking = booking;
+    }
+    
+    @Override
+    public double getTotalAmount() {
+        return decoratedBooking.getTotalAmount() + getAdditionalCost();
+    }
+    
+    @Override
+    public List<Amenity> getSelectedAmenities() {
+        List<Amenity> amenities = new ArrayList<>(decoratedBooking.getSelectedAmenities());
+        amenities.addAll(getAdditionalAmenities());
+        return amenities;
+    }
+    
+    protected abstract double getAdditionalCost();
+    protected abstract List<Amenity> getAdditionalAmenities();
+}
+
+// Concrete Decorators
+public class BreakfastDecorator extends BookingDecorator {
+    private static final double BREAKFAST_COST = 25.0;
+    
+    public BreakfastDecorator(HotelBooking booking) {
+        super(booking);
+    }
+    
+    @Override
+    protected double getAdditionalCost() {
+        long nights = ChronoUnit.DAYS.between(
+            decoratedBooking.getCheckInDate(), decoratedBooking.getCheckOutDate());
+        return BREAKFAST_COST * nights * decoratedBooking.getGuests().size();
+    }
+    
+    @Override
+    protected List<Amenity> getAdditionalAmenities() {
+        Amenity breakfast = new Amenity("BFST", "Breakfast", "Daily breakfast buffet", 
+                                       BREAKFAST_COST, false);
+        return Arrays.asList(breakfast);
+    }
+    
+    @Override
+    public String getDescription() {
+        return decoratedBooking.getDescription() + " + Breakfast";
+    }
+}
+
+public class SpaDecorator extends BookingDecorator {
+    private static final double SPA_PACKAGE_COST = 150.0;
+    
+    public SpaDecorator(HotelBooking booking) {
+        super(booking);
+    }
+    
+    @Override
+    protected double getAdditionalCost() {
+        return SPA_PACKAGE_COST * decoratedBooking.getGuests().size();
+    }
+    
+    @Override
+    protected List<Amenity> getAdditionalAmenities() {
+        Amenity spa = new Amenity("SPA", "Spa Package", "Full spa access with massage", 
+                                 SPA_PACKAGE_COST, false);
+        return Arrays.asList(spa);
+    }
+    
+    @Override
+    public String getDescription() {
+        return decoratedBooking.getDescription() + " + Spa Package";
+    }
+}
+
+public class AirportTransferDecorator extends BookingDecorator {
+    private static final double TRANSFER_COST = 50.0;
+    
+    public AirportTransferDecorator(HotelBooking booking) {
+        super(booking);
+    }
+    
+    @Override
+    protected double getAdditionalCost() {
+        return TRANSFER_COST * 2; // Round trip
+    }
+    
+    @Override
+    protected List<Amenity> getAdditionalAmenities() {
+        Amenity transfer = new Amenity("TRNSF", "Airport Transfer", "Round trip airport transfer", 
+                                      TRANSFER_COST, false);
+        return Arrays.asList(transfer);
+    }
+    
+    @Override
+    public String getDescription() {
+        return decoratedBooking.getDescription() + " + Airport Transfer";
+    }
+}
+
+// Decorator Service
+@Service
+public class AmenityDecoratorService {
+    
+    public HotelBooking addAmenities(HotelBooking booking, List<String> amenityCodes) {
+        HotelBooking decoratedBooking = booking;
+        
+        for (String code : amenityCodes) {
+            switch (code) {
+                case "BREAKFAST":
+                    decoratedBooking = new BreakfastDecorator(decoratedBooking);
+                    break;
+                case "SPA":
+                    decoratedBooking = new SpaDecorator(decoratedBooking);
+                    break;
+                case "TRANSFER":
+                    decoratedBooking = new AirportTransferDecorator(decoratedBooking);
+                    break;
+            }
+        }
+        
+        return decoratedBooking;
+    }
+}
+7. Chain of Responsibility - Booking Validation
+java
+// Validation Handler Interface
+public interface BookingValidationHandler {
+    ValidationResult validate(HotelBooking booking);
+    void setNextHandler(BookingValidationHandler nextHandler);
+}
+
+// Abstract Base Handler
+public abstract class AbstractValidationHandler implements BookingValidationHandler {
+    protected BookingValidationHandler nextHandler;
+    
+    @Override
+    public void setNextHandler(BookingValidationHandler nextHandler) {
+        this.nextHandler = nextHandler;
+    }
+    
+    protected ValidationResult validateNext(HotelBooking booking) {
+        if (nextHandler == null) {
+            return new ValidationResult(true, "All validations passed");
+        }
+        return nextHandler.validate(booking);
+    }
+}
+
+// Concrete Handlers
+@Component
+public class AvailabilityValidationHandler extends AbstractValidationHandler {
+    private final RoomRepository roomRepository;
+    
+    @Autowired
+    public AvailabilityValidationHandler(RoomRepository roomRepository) {
+        this.roomRepository = roomRepository;
+    }
+    
+    @Override
+    public ValidationResult validate(HotelBooking booking) {
+        for (Room room : booking.getRooms()) {
+            if (!isRoomAvailable(room, booking.getCheckInDate(), booking.getCheckOutDate())) {
+                return new ValidationResult(false, 
+                    "Room " + room.getRoomNumber() + " is not available for selected dates");
+            }
+        }
+        return validateNext(booking);
+    }
+    
+    private boolean isRoomAvailable(Room room, LocalDate checkIn, LocalDate checkOut) {
+        // Implementation to check room availability
+        return true;
+    }
+}
+
+@Component
+public class CapacityValidationHandler extends AbstractValidationHandler {
+    
+    @Override
+    public ValidationResult validate(HotelBooking booking) {
+        for (Room room : booking.getRooms()) {
+            int roomCapacity = room.getCapacity();
+            int guestsInRoom = Math.min(booking.getGuests().size(), roomCapacity);
+            
+            if (guestsInRoom > roomCapacity) {
+                return new ValidationResult(false,
+                    "Room " + room.getRoomNumber() + " exceeds capacity. Max: " + roomCapacity);
+            }
+        }
+        return validateNext(booking);
+    }
+}
+
+@Component
+public class DateValidationHandler extends AbstractValidationHandler {
+    
+    @Override
+    public ValidationResult validate(HotelBooking booking) {
+        if (booking.getCheckInDate().isBefore(LocalDate.now())) {
+            return new ValidationResult(false, "Check-in date cannot be in the past");
+        }
+        
+        if (booking.getCheckOutDate().isBefore(booking.getCheckInDate())) {
+            return new ValidationResult(false, "Check-out date must be after check-in date");
+        }
+        
+        if (ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate()) > 30) {
+            return new ValidationResult(false, "Maximum stay duration is 30 days");
+        }
+        
+        return validateNext(booking);
+    }
+}
+
+@Component
+public class GuestValidationHandler extends AbstractValidationHandler {
+    
+    @Override
+    public ValidationResult validate(HotelBooking booking) {
+        for (Guest guest : booking.getGuests()) {
+            if (guest.getName() == null || guest.getName().trim().isEmpty()) {
+                return new ValidationResult(false, "Guest name is required");
+            }
+            
+            if (guest.getEmail() == null || !isValidEmail(guest.getEmail())) {
+                return new ValidationResult(false, "Valid email is required for all guests");
+            }
+            
+            // Age validation for certain room types
+            if (isMinor(guest) && !isFamilyBooking(booking)) {
+                return new ValidationResult(false, "Minors require family booking");
+            }
+        }
+        return validateNext(booking);
+    }
+    
+    private boolean isValidEmail(String email) {
+        return email.contains("@") && email.contains(".");
+    }
+    
+    private boolean isMinor(Guest guest) {
+        return ChronoUnit.YEARS.between(guest.getDateOfBirth().toInstant()
+            .atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now()) < 18;
+    }
+    
+    private boolean isFamilyBooking(HotelBooking booking) {
+        return booking instanceof FamilyBooking;
+    }
+}
+
+// Validation Chain Builder
+@Service
+public class BookingValidationChain {
+    private BookingValidationHandler chain;
+    
+    @Autowired
+    public BookingValidationChain(AvailabilityValidationHandler availabilityHandler,
+                                CapacityValidationHandler capacityHandler,
+                                DateValidationHandler dateHandler,
+                                GuestValidationHandler guestHandler) {
+        // Build the chain
+        this.chain = availabilityHandler;
+        availabilityHandler.setNextHandler(capacityHandler);
+        capacityHandler.setNextHandler(dateHandler);
+        dateHandler.setNextHandler(guestHandler);
+    }
+    
+    public ValidationResult validateBooking(HotelBooking booking) {
+        return chain.validate(booking);
+    }
+}
+
+// Validation Result
+public class ValidationResult {
+    private final boolean isValid;
+    private final String message;
+    
+    public ValidationResult(boolean isValid, String message) {
+        this.isValid = isValid;
+        this.message = message;
+    }
+    
+    // Getters
+    public boolean isValid() { return isValid; }
+    public String getMessage() { return message; }
+}
+8. Main Booking Service Integrating All Patterns
+java
+@Service
+public class HotelBookingService {
+    private final BookingFactory bookingFactory;
+    private final PricingContext pricingContext;
+    private final BookingValidationChain validationChain;
+    private final AmenityDecoratorService amenityDecorator;
+    private final BookingNotifier notifier;
+    private final BookingRepository bookingRepository;
+    
+    @Autowired
+    public HotelBookingService(BookingFactory bookingFactory,
+                             PricingContext pricingContext,
+                             BookingValidationChain validationChain,
+                             AmenityDecoratorService amenityDecorator,
+                             BookingNotifier notifier,
+                             BookingRepository bookingRepository) {
+        this.bookingFactory = bookingFactory;
+        this.pricingContext = pricingContext;
+        this.validationChain = validationChain;
+        this.amenityDecorator = amenityDecorator;
+        this.notifier = notifier;
+        this.bookingRepository = bookingRepository;
+    }
+    
+    public HotelBooking createBooking(BookingRequest request) {
+        // Create base booking using Factory Pattern
+        HotelBooking booking = bookingFactory.createBooking(request.getBookingType(), request);
+        
+        // Add amenities using Decorator Pattern
+        if (request.getAdditionalAmenities() != null) {
+            booking = amenityDecorator.addAmenities(booking, request.getAdditionalAmenities());
+        }
+        
+        // Validate using Chain of Responsibility
+        ValidationResult validation = validationChain.validateBooking(booking);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Booking validation failed: " + validation.getMessage());
+        }
+        
+        // Calculate price using Strategy Pattern
+        double finalPrice = pricingContext.calculateFinalPrice(booking);
+        booking.setTotalAmount(finalPrice);
+        
+        // Save booking
+        HotelBooking savedBooking = bookingRepository.save(booking);
+        
+        // Notify observers using Observer Pattern
+        notifier.notifyBookingCreated(savedBooking);
+        
+        return savedBooking;
+    }
+    
+    public void confirmBooking(String bookingId) {
+        HotelBooking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+        
+        notifier.notifyBookingConfirmed(booking);
+    }
+    
+    public List<Room> searchAvailableRooms(SearchRequest request) {
+        RoomSearchService searchService = new RoomSearchService(roomRepository);
+        return searchService.searchRooms(request);
+    }
+}
