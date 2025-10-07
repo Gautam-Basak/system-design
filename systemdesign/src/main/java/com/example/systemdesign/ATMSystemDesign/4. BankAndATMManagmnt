@@ -1,0 +1,102 @@
+class Bank {
+    private String name;
+    private String bankCode;
+    private List<ATM> atms;
+    
+    public Bank(String name, String bankCode) {
+        this.name = name;
+        this.bankCode = bankCode;
+        this.atms = new ArrayList<>();
+    }
+    
+    public String getBankCode() {
+        return bankCode;
+    }
+    
+    public void addATM(ATM atm) {
+        atms.add(atm);
+        System.out.println("ATM added: " + atm.getATMId() + " at " + atm.getLocation());
+    }
+    
+    public List<ATM> getATMs() {
+        return new ArrayList<>(atms);
+    }
+}
+
+class ATM {
+    private String atmId;
+    private String location;
+    private CashDispenser cashDispenser;
+    private Keypad keypad;
+    private Screen screen;
+    private Printer printer;
+    private CheckDepositSlot checkDepositSlot;
+    private CashDepositSlot cashDepositSlot;
+    private Bank bank;
+    
+    public ATM(String id, String location, Bank bank) {
+        this.atmId = id;
+        this.location = location;
+        this.bank = bank;
+        this.cashDispenser = new CashDispenser();
+        this.keypad = new Keypad();
+        this.screen = new Screen();
+        this.printer = new Printer();
+        this.checkDepositSlot = new CheckDepositSlot();
+        this.cashDepositSlot = new CashDepositSlot();
+    }
+    
+    public Customer authenticateUser(String cardNumber, int pin) {
+        // In real system, this would query a database
+        System.out.println("Authenticating card: " + cardNumber);
+        
+        // Simulate authentication
+        if (isValidCard(cardNumber) && verifyPIN(cardNumber, pin)) {
+            System.out.println("Authentication successful");
+            return getCustomerByCard(cardNumber);
+        } else {
+            System.out.println("Authentication failed");
+            return null;
+        }
+    }
+    
+    public TransactionStatus makeTransaction(Customer customer, Transaction transaction) {
+        System.out.println("Processing transaction: " + transaction.getTransactionId());
+        
+        TransactionStatus status = transaction.processTransaction();
+        
+        if (status == TransactionStatus.SUCCESS) {
+            printer.printReceipt(transaction);
+            System.out.println("Transaction completed successfully");
+        } else {
+            System.out.println("Transaction failed: " + status);
+        }
+        
+        return status;
+    }
+    
+    private boolean isValidCard(String cardNumber) {
+        return cardNumber != null && cardNumber.length() == 16 && cardNumber.matches("\\d+");
+    }
+    
+    private boolean verifyPIN(String cardNumber, int pin) {
+        // In real system, this would verify against encrypted PIN
+        return pin >= 1000 && pin <= 9999;
+    }
+    
+    private Customer getCustomerByCard(String cardNumber) {
+        // In real system, this would query customer database
+        Address address = new Address("123 Main St", "New York", "NY", "10001", "USA");
+        Card card = new Card(cardNumber, "John Doe", "12/25", 1234);
+        Account account = new SavingAccount(1000); // Default withdraw limit
+        return new Customer("John Doe", address, "john@email.com", "123-456-7890", 
+                           CustomerStatus.ACTIVE, card, account);
+    }
+    
+    // Getters
+    public String getATMId() { return atmId; }
+    public String getLocation() { return location; }
+    public CashDispenser getCashDispenser() { return cashDispenser; }
+    public Screen getScreen() { return screen; }
+    public Keypad getKeypad() { return keypad; }
+}

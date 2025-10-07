@@ -1,0 +1,200 @@
+9. Parking Lot (Singleton Pattern)
+java
+
+// ParkingLot.java
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class ParkingLot {
+    // Singleton instance
+    private static ParkingLot instance;
+    private static final ReentrantLock lock = new ReentrantLock();
+    
+    private String name;
+    private Address address;
+    private ParkingRate parkingRate;
+    
+    private int compactSpotCount;
+    private int largeSpotCount;
+    private int motorbikeSpotCount;
+    private int electricSpotCount;
+    private int maxCompactCount;
+    private int maxLargeCount;
+    private int maxMotorbikeCount;
+    private int maxElectricCount;
+    
+    private Map<String, EntrancePanel> entrancePanels;
+    private Map<String, ExitPanel> exitPanels;
+    private Map<String, ParkingFloor> parkingFloors;
+    
+    // All active parking tickets
+    private Map<String, ParkingTicket> activeTickets;
+    
+    private ParkingLot(String name, Address address) {
+        this.name = name;
+        this.address = address;
+        this.parkingRate = new ParkingRate();
+        
+        this.entrancePanels = new ConcurrentHashMap<>();
+        this.exitPanels = new ConcurrentHashMap<>();
+        this.parkingFloors = new ConcurrentHashMap<>();
+        this.activeTickets = new ConcurrentHashMap<>();
+        
+        // Initialize with default values
+        this.maxCompactCount = 100;
+        this.maxLargeCount = 50;
+        this.maxMotorbikeCount = 30;
+        this.maxElectricCount = 20;
+    }
+    
+    public static ParkingLot getInstance(String name, Address address) {
+        if (instance == null) {
+            lock.lock();
+            try {
+                if (instance == null) {
+                    instance = new ParkingLot(name, address);
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+        return instance;
+    }
+    
+    public synchronized ParkingTicket getNewParkingTicket(Vehicle vehicle) {
+        if (isFull(vehicle.getType())) {
+            throw new RuntimeException("Parking full!");
+        }
+        
+        ParkingTicket ticket = new ParkingTicket();
+        vehicle.assignTicket(ticket);
+        ticket.setVehicleLicenseNumber(vehicle.getLicenseNumber());
+        ticket.saveInDB();
+        
+        incrementSpotCount(vehicle.getType());
+        activeTickets.put(ticket.getTicketNumber(), ticket);
+        
+        return ticket;
+    }
+    
+    public boolean isFull(VehicleType type) {
+        // Trucks and vans can only be parked in LargeSpot
+        if (type == VehicleType.TRUCK || type == VehicleType.VAN) {
+            return largeSpotCount >= maxLargeCount;
+        }
+        
+        // Motorbikes can only be parked at motorbike spots
+        if (type == VehicleType.MOTORBIKE) {
+            return motorbikeSpotCount >= maxMotorbikeCount;
+        }
+        
+        // Cars can be parked at compact or large spots
+        if (type == VehicleType.CAR) {
+            return (compactSpotCount + largeSpotCount) >= (maxCompactCount + maxLargeCount);
+        }
+        
+        // Electric car can be parked at compact, large or electric spots
+        return (compactSpotCount + largeSpotCount + electricSpotCount) >= 
+               (maxCompactCount + maxLargeCount + maxElectricCount);
+    }
+    
+    private void incrementSpotCount(VehicleType type) {
+        if (type == VehicleType.TRUCK || type == VehicleType.VAN) {
+            largeSpotCount++;
+        } else if (type == VehicleType.MOTORBIKE) {
+            motorbikeSpotCount++;
+        } else if (type == VehicleType.CAR) {
+            if (compactSpotCount < maxCompactCount) {
+                compactSpotCount++;
+            } else {
+                largeSpotCount++;
+            }
+        } else if (type == VehicleType.ELECTRIC) {
+            if (electricSpotCount < maxElectricCount) {
+                electricSpotCount++;
+            } else if (compactSpotCount < maxCompactCount) {
+                compactSpotCount++;
+            } else {
+                largeSpotCount++;
+            }
+        }
+    }
+    
+    public void decrementSpotCount(VehicleType type) {
+        if (type == VehicleType.TRUCK || type == VehicleType.VAN) {
+            largeSpotCount--;
+        } else if (type == VehicleType.MOTORBIKE) {
+            motorbikeSpotCount--;
+        } else if (type == VehicleType.CAR) {
+            if (compactSpotCount > 0) {
+                compactSpotCount--;
+            } else {
+                largeSpotCount--;
+            }
+        } else if (type == VehicleType.ELECTRIC) {
+            if (electricSpotCount > 0) {
+                electricSpotCount--;
+            } else if (compactSpotCount > 0) {
+                compactSpotCount--;
+            } else {
+                largeSpotCount--;
+            }
+        }
+    }
+    
+    public boolean isFull() {
+        for (ParkingFloor floor : parkingFloors.values()) {
+            if (!floor.isFull()) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    public void addParkingFloor(ParkingFloor floor) {
+        parkingFloors.put(floor.getName(), floor);
+        // Update spot counts based on the new floor
+        updateSpotCounts();
+    }
+    
+    public void addEntrancePanel(EntrancePanel entrancePanel) {
+        entrancePanels.put(entrancePanel.getId(), entrancePanel);
+    }
+    
+    public void addExitPanel(ExitPanel exitPanel) {
+        exitPanels.put(exitPanel.getId(), exitPanel);
+    }
+    
+    private void updateSpotCounts() {
+        // Implementation to update spot counts based on all floors
+        // This would iterate through all floors and sum up the spots
+    }
+    
+    public boolean processPayment(ParkingTicket ticket, PaymentType paymentType) {
+        ticket.setPaidAt(java.time.LocalDateTime.now());
+        ticket.setStatus(ParkingTicketStatus.PAID);
+        ticket.setAmount(parkingRate.calculateCharges(ticket.getIssuedAt(), ticket.getPaidAt()));
+        ticket.updateInDB();
+        
+        activeTickets.remove(ticket.getTicketNumber());
+        decrementSpotCount(getVehicleTypeFromTicket(ticket));
+        
+        return true;
+    }
+    
+    private VehicleType getVehicleTypeFromTicket(ParkingTicket ticket) {
+        // Implementation to get vehicle type from ticket
+        // This would typically query the database
+        return VehicleType.CAR; // Default
+    }
+    
+    // Getters and setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public Address getAddress() { return address; }
+    public void setAddress(Address address) { this.address = address; }
+    public ParkingRate getParkingRate() { return parkingRate; }
+    public void setParkingRate(ParkingRate parkingRate) { this.parkingRate = parkingRate; }
+    public Map<String, ParkingFloor> getParkingFloors() { return parkingFloors; }
+}

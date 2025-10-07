@@ -1,0 +1,113 @@
+1. Domain Models
+
+
+// Enums
+public enum BookStatus {
+    AVAILABLE, BORROWED, RESERVED, UNDER_MAINTENANCE
+}
+
+public enum BookType {
+    REGULAR, REFERENCE, PERIODICAL, EBOOK, AUDIOBOOK
+}
+
+public enum MemberType {
+    STUDENT, FACULTY, STAFF, GUEST
+}
+
+public enum ReservationStatus {
+    ACTIVE, FULFILLED, CANCELLED, EXPIRED
+}
+
+public enum NotificationType {
+    DUE_DATE_REMINDER, BOOK_AVAILABLE, FINE_ALERT, NEW_ARRIVAL
+}
+
+// Domain Entities
+public class Book {
+    private String isbn;
+    private String title;
+    private String author;
+    private String publisher;
+    private int publicationYear;
+    private BookType bookType;
+    private BookStatus status;
+    private List<String> genres;
+    private int totalCopies;
+    private int availableCopies;
+    private LocalDate acquisitionDate;
+    private double price;
+    
+    // Getters and setters
+}
+
+public class BookItem extends Book {
+    private String barcode;
+    private String rackNumber;
+    private boolean isReferenceOnly;
+    private LocalDate dueDate;
+    
+    // Getters and setters
+}
+
+public class Member {
+    private String memberId;
+    private String name;
+    private String email;
+    private String phone;
+    private MemberType memberType;
+    private LocalDate registrationDate;
+    private LocalDate membershipExpiry;
+    private int maxBooksAllowed;
+    private int currentBooksBorrowed;
+    private double totalFines;
+    
+    // Getters and setters
+}
+
+public class BorrowRecord {
+    private String borrowId;
+    private String memberId;
+    private String bookBarcode;
+    private LocalDate borrowDate;
+    private LocalDate dueDate;
+    private LocalDate returnDate;
+    private double fineAmount;
+    private boolean isReturned;
+    
+    // Getters and setters
+}
+
+public class Reservation {
+    private String reservationId;
+    private String memberId;
+    private String bookIsbn;
+    private LocalDate reservationDate;
+    private LocalDate notificationDate;
+    private ReservationStatus status;
+    private int positionInQueue;
+    
+    // Getters and setters
+}
+
+public class Fine {
+    private String fineId;
+    private String memberId;
+    private String borrowId;
+    private double amount;
+    private LocalDate issuedDate;
+    private LocalDate paidDate;
+    private boolean isPaid;
+    private String reason;
+    
+    // Getters and setters
+}
+
+public class Librarian {
+    private String librarianId;
+    private String name;
+    private String email;
+    private String department;
+    private List<String> permissions;
+    
+    // Getters and setters
+}

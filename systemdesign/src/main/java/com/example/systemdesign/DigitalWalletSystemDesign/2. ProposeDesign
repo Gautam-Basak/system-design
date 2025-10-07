@@ -1,0 +1,16 @@
+Three high level design
+1.	Simple In-Memory solution
+2.	Databased based distributed transaction solution
+3.	Event Sourcing solution with reproducibility
+•	In-Memory solution
+-	All the in memory redis  nodes are stored centrally. We can use Zookeeper
+-	Receives a transfer command, validate the transfer command
+-	Execute the transfer command
+-	As the wallet service is stateless it is easy to scale horizontally.
+-	The problem comes in which one client from whom money will be deducted is on node A and the client to whom money will be deposited will be on node B. The entire process will be conducted on two node what if in one node operation completed properly but the other node crashes.
+•	DataBase Distributed
+-	Two concepts are there –
+	2 phase commit
+	Try-Confirm/Cancel(TC/C)
+•	Event Sourcing
+-	Saga Design with Choreography (microservices) or Orchestration (Single co-ordinator)

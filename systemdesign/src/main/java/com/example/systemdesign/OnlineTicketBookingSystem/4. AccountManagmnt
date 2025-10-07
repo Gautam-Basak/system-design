@@ -1,0 +1,27 @@
+class Account {
+    private String id;
+    private String password;
+    private AccountStatus status;
+    
+    public Account(String id, String password, AccountStatus status) {
+        this.id = id;
+        this.password = password;
+        this.status = status;
+    }
+    
+    public boolean resetPassword() {
+        String tempPassword = generateTempPassword();
+        this.password = tempPassword;
+        System.out.println("Password reset for account: " + id);
+        return true;
+    }
+    
+    private String generateTempPassword() {
+        return "TEMP_" + System.currentTimeMillis();
+    }
+    
+    // Getters
+    public String getId() { return id; }
+    public AccountStatus getStatus() { return status; }
+    public void setStatus(AccountStatus status) { this.status = status; }
+}

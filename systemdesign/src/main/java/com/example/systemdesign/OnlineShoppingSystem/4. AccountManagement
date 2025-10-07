@@ -1,0 +1,55 @@
+// Account Class
+class Account {
+    private String userName;
+    private String password;
+    private String name;
+    private String email;
+    private String phone;
+    private Address shippingAddress;
+    private AccountStatus status;
+    private List<String> creditCards;
+    private List<String> bankAccounts;
+    private List<Product> products;
+    private List<ProductReview> reviews;
+    
+    public Account(String userName, String password, String name, String email, String phone, Address shippingAddress) {
+        this.userName = userName;
+        this.password = password;
+        this.name = name;
+        this.email = email;
+        this.phone = phone;
+        this.shippingAddress = shippingAddress;
+        this.status = AccountStatus.ACTIVE;
+        this.creditCards = new ArrayList<>();
+        this.bankAccounts = new ArrayList<>();
+        this.products = new ArrayList<>();
+        this.reviews = new ArrayList<>();
+    }
+    
+    public void addProduct(Product product) {
+        products.add(product);
+        System.out.println("Product added: " + product.getName());
+    }
+    
+    public void addProductReview(ProductReview review) {
+        reviews.add(review);
+        System.out.println("Review added for product: " + review.getRating() + " stars");
+    }
+    
+    public boolean resetPassword() {
+        // Generate temporary password and send to email
+        String tempPassword = generateTempPassword();
+        this.password = tempPassword;
+        System.out.println("Password reset. Temporary password sent to: " + email);
+        return true;
+    }
+    
+    private String generateTempPassword() {
+        return "TEMP_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    // Getters
+    public String getUserName() { return userName; }
+    public String getEmail() { return email; }
+    public AccountStatus getStatus() { return status; }
+}

@@ -1,0 +1,23 @@
+// Notification Class
+class Notification {
+    private String notificationId;
+    private LocalDate createdOn;
+    private String content;
+    private String type;
+    
+    public Notification(String id, String content, String type) {
+        this.notificationId = id;
+        this.content = content;
+        this.type = type;
+        this.createdOn = LocalDate.now();
+    }
+    
+    public void sendNotification(Account account) {
+        // Simulate sending notification
+        System.out.println("Sending " + type + " notification to: " + account.getEmail());
+        System.out.println("Content: " + content);
+        System.out.println("Notification ID: " + notificationId);
+    }
+    
+    public String getContent() { return content; }
+}

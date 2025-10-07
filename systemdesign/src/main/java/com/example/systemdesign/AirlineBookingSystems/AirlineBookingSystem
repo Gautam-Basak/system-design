@@ -31,6 +31,8 @@ Notification System
 
 Loyalty Points Management
 
+
+
 1. Domain Models
 java
 // Enums
@@ -156,6 +158,10 @@ public class LoyaltyAccount {
     
     // Getters and setters
 }
+
+
+
+
 2. Repository Pattern Implementation
 java
 // Repository Interfaces
@@ -185,6 +191,10 @@ public interface PaymentRepository {
     Optional<Payment> findByBookingId(String bookingId);
     void updateStatus(String paymentId, PaymentStatus status);
 }
+
+
+
+
 3. Factory Pattern for Booking Types
 java
 // Booking Factory
@@ -222,6 +232,10 @@ public class BookingFactory {
         return "BKG_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }
+
+
+
+
 4. Strategy Pattern for Payment & Pricing
 java
 // Payment Strategy
@@ -320,6 +334,10 @@ public class LoyaltyPricingStrategy implements PricingStrategy {
         return basePrice;
     }
 }
+
+
+
+
 5. Observer Pattern for Notifications
 java
 // Observer Interface
@@ -423,6 +441,10 @@ public class InventoryManagementService implements BookingObserver {
         });
     }
 }
+
+
+
+
 6. Facade Pattern for Simplified Booking
 java
 // Booking Facade
@@ -479,6 +501,10 @@ public class BookingFacade {
         }
     }
 }
+
+
+
+
 7. Chain of Responsibility for Validation
 java
 // Validation Chain
@@ -562,6 +588,10 @@ public class BookingValidationService {
         return validationChain.validate(booking);
     }
 }
+
+
+
+
 8. Main Service Classes
 java
 @Service
@@ -694,6 +724,10 @@ public class PaymentService {
         return payment;
     }
 }
+
+
+
+
 9. REST Controllers
 java
 @RestController

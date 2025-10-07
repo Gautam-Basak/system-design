@@ -1,0 +1,185 @@
+class CashDispenser {
+    private int totalFiveDollarBills;
+    private int totalTwentyDollarBills;
+    
+    public CashDispenser() {
+        this.totalFiveDollarBills = 100; // Default 100 bills
+        this.totalTwentyDollarBills = 100; // Default 100 bills
+    }
+    
+    public boolean dispenseCash(double amount) {
+        if (!canDispenseCash(amount)) {
+            System.out.println("Cannot dispense $" + amount + " - Insufficient cash or invalid amount");
+            return false;
+        }
+        
+        int twentyBills = (int) (amount / 20);
+        int fiveBills = (int) ((amount % 20) / 5);
+        
+        if (twentyBills <= totalTwentyDollarBills && fiveBills <= totalFiveDollarBills) {
+            totalTwentyDollarBills -= twentyBills;
+            totalFiveDollarBills -= fiveBills;
+            
+            System.out.println("Dispensing cash: $" + amount);
+            System.out.println(" - " + twentyBills + " twenty-dollar bills");
+            System.out.println(" - " + fiveBills + " five-dollar bills");
+            return true;
+        }
+        
+        return false;
+    }
+    
+    public boolean canDispenseCash(double amount) {
+        if (amount <= 0 || amount % 5 != 0) {
+            return false; // Amount must be multiple of 5
+        }
+        
+        int twentyBills = (int) (amount / 20);
+        int fiveBills = (int) ((amount % 20) / 5);
+        
+        return twentyBills <= totalTwentyDollarBills && fiveBills <= totalFiveDollarBills;
+    }
+    
+    public void refill(int fiveDollarBills, int twentyDollarBills) {
+        this.totalFiveDollarBills += fiveDollarBills;
+        this.totalTwentyDollarBills += twentyDollarBills;
+        System.out.println("Cash dispenser refilled");
+    }
+    
+    // Getters
+    public int getTotalFiveDollarBills() { return totalFiveDollarBills; }
+    public int getTotalTwentyDollarBills() { return totalTwentyDollarBills; }
+}
+
+class Keypad {
+    public String getInput() {
+        // Simulate keypad input
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Keypad input: ");
+        return scanner.nextLine();
+    }
+    
+    public int getNumericInput() {
+        try {
+            Scanner scanner = new Scanner(System.in);
+            System.out.print("Enter number: ");
+            return scanner.nextInt();
+        } catch (Exception e) {
+            return -1;
+        }
+    }
+}
+
+class Screen {
+    public void showMessage(String message) {
+        System.out.println("ATM Screen: " + message);
+    }
+    
+    public String getInput() {
+        Scanner scanner = new Scanner(System.in);
+        System.out.print("Screen input: ");
+        return scanner.nextLine();
+    }
+    
+    public void showMenu() {
+        System.out.println("\n=== ATM Menu ===");
+        System.out.println("1. Balance Inquiry");
+        System.out.println("2. Withdraw Cash");
+        System.out.println("3. Deposit Cash");
+        System.out.println("4. Deposit Check");
+        System.out.println("5. Transfer Funds");
+        System.out.println("6. Exit");
+        System.out.print("Choose option: ");
+    }
+}
+
+class Printer {
+    public void printReceipt(Transaction transaction) {
+        System.out.println("\n=== TRANSACTION RECEIPT ===");
+        System.out.println("Transaction ID: " + transaction.getTransactionId());
+        System.out.println("Date: " + transaction.getCreationTime());
+        System.out.println("Type: " + transaction.getTransactionType());
+        System.out.println("Status: " + transaction.getStatus());
+        System.out.println("Amount: $" + (transaction instanceof Deposit ? 
+            ((Deposit) transaction).getAmount() : 
+            (transaction instanceof Withdraw ? ((Withdraw) transaction).getAmount() : 0)));
+        System.out.println("============================\n");
+    }
+}
+
+abstract class DepositSlot {
+    protected double totalAmount;
+    
+    public DepositSlot() {
+        this.totalAmount = 0.0;
+    }
+    
+    public double getTotalAmount() {
+        return totalAmount;
+    }
+    
+    public abstract boolean processDeposit(double amount);
+}
+
+class CheckDepositSlot extends DepositSlot {
+    private String checkNumber;
+    private String bankCode;
+    
+    public CheckDepositSlot() {
+        super();
+    }
+    
+    @Override
+    public boolean processDeposit(double amount) {
+        if (amount > 0) {
+            this.totalAmount += amount;
+            System.out.println("Check deposit processed: $" + amount);
+            return true;
+        }
+        return false;
+    }
+    
+    public boolean processCheck(String checkNumber, String bankCode, double amount) {
+        this.checkNumber = checkNumber;
+        this.bankCode = bankCode;
+        return processDeposit(amount);
+    }
+    
+    public String getCheckNumber() {
+        return checkNumber;
+    }
+    
+    public String getBankCode() {
+        return bankCode;
+    }
+}
+
+class CashDepositSlot extends DepositSlot {
+    private static final double CASH_DEPOSIT_LIMIT = 10000.0;
+    
+    public CashDepositSlot() {
+        super();
+    }
+    
+    @Override
+    public boolean processDeposit(double amount) {
+        if (amount > 0 && amount <= CASH_DEPOSIT_LIMIT) {
+            this.totalAmount += amount;
+            System.out.println("Cash deposit processed: $" + amount);
+            return true;
+        } else if (amount > CASH_DEPOSIT_LIMIT) {
+            System.out.println("Cash deposit exceeds limit of $" + CASH_DEPOSIT_LIMIT);
+            return false;
+        }
+        return false;
+    }
+    
+    public void receiveDollarBill(double denomination) {
+        processDeposit(denomination);
+        System.out.println("Received $" + denomination + " bill");
+    }
+    
+    public double getCashDepositLimit() {
+        return CASH_DEPOSIT_LIMIT;
+    }
+}

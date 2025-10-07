@@ -1,0 +1,140 @@
+4. Vehicle Classes (Factory Pattern)
+java
+
+
+// Vehicle.java
+public abstract class Vehicle {
+    private String licenseNumber;
+    private VehicleType type;
+    private ParkingTicket ticket;
+    
+    public Vehicle(String licenseNumber, VehicleType type, ParkingTicket ticket) {
+        this.licenseNumber = licenseNumber;
+        this.type = type;
+        this.ticket = ticket;
+    }
+    
+    public void assignTicket(ParkingTicket ticket) {
+        this.ticket = ticket;
+    }
+    
+    // Getters and setters
+    public String getLicenseNumber() { return licenseNumber; }
+    public void setLicenseNumber(String licenseNumber) { this.licenseNumber = licenseNumber; }
+    public VehicleType getType() { return type; }
+    public void setType(VehicleType type) { this.type = type; }
+    public ParkingTicket getTicket() { return ticket; }
+    public void setTicket(ParkingTicket ticket) { this.ticket = ticket; }
+}
+
+// Car.java
+public class Car extends Vehicle {
+    public Car(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.CAR, ticket);
+    }
+}
+
+// Truck.java
+public class Truck extends Vehicle {
+    public Truck(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.TRUCK, ticket);
+    }
+}
+
+// Van.java
+public class Van extends Vehicle {
+    public Van(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.VAN, ticket);
+    }
+}
+
+// MotorBike.java
+public class MotorBike extends Vehicle {
+    public MotorBike(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.MOTORBIKE, ticket);
+    }
+}
+
+// ElectricVehicle.java
+public class ElectricVehicle extends Vehicle {
+    public ElectricVehicle(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.ELECTRIC, ticket);
+    }
+}
+
+
+
+
+5. Parking Spot Classes (Factory Pattern)
+java
+// ParkingSpot.java
+public abstract class ParkingSpot {
+    private String number;
+    private boolean free;
+    private Vehicle vehicle;
+    private ParkingSpotType type;
+    
+    public ParkingSpot(String number, ParkingSpotType type) {
+        this.number = number;
+        this.type = type;
+        this.free = true;
+        this.vehicle = null;
+    }
+    
+    public boolean isFree() {
+        return free;
+    }
+    
+    public void assignVehicle(Vehicle vehicle) {
+        this.vehicle = vehicle;
+        this.free = false;
+    }
+    
+    public void removeVehicle() {
+        this.vehicle = null;
+        this.free = true;
+    }
+    
+    // Getters and setters
+    public String getNumber() { return number; }
+    public void setNumber(String number) { this.number = number; }
+    public Vehicle getVehicle() { return vehicle; }
+    public void setVehicle(Vehicle vehicle) { this.vehicle = vehicle; }
+    public ParkingSpotType getType() { return type; }
+    public void setType(ParkingSpotType type) { this.type = type; }
+}
+
+// HandicappedSpot.java
+public class HandicappedSpot extends ParkingSpot {
+    public HandicappedSpot(String number) {
+        super(number, ParkingSpotType.HANDICAPPED);
+    }
+}
+
+// CompactSpot.java
+public class CompactSpot extends ParkingSpot {
+    public CompactSpot(String number) {
+        super(number, ParkingSpotType.COMPACT);
+    }
+}
+
+// LargeSpot.java
+public class LargeSpot extends ParkingSpot {
+    public LargeSpot(String number) {
+        super(number, ParkingSpotType.LARGE);
+    }
+}
+
+// MotorbikeSpot.java
+public class MotorbikeSpot extends ParkingSpot {
+    public MotorbikeSpot(String number) {
+        super(number, ParkingSpotType.MOTORBIKE);
+    }
+}
+
+// ElectricSpot.java
+public class ElectricSpot extends ParkingSpot {
+    public ElectricSpot(String number) {
+        super(number, ParkingSpotType.ELECTRIC);
+    }
+}

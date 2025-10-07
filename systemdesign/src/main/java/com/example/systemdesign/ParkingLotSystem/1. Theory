@@ -1,0 +1,21 @@
+Design Patterns Used:
+Singleton Pattern - ParkingLot class (only one instance)
+
+Factory Pattern - Vehicle and ParkingSpot creation
+
+Strategy Pattern - Different parking rate calculations
+
+Observer Pattern - Display board updates
+
+Template Method Pattern - Parking spot assignment logic
+
+State Pattern - Parking ticket status
+
+
+Core Functionalities:
+Vehicle & Spot Management (Registration, Type Handling)
+Ticket System (Generation, Status Tracking)
+Payment Processing (Calculation, Multiple Methods)
+Real-time Monitoring (Display Boards, Availability Updates)
+Administrative Controls (Floor/Spot Configuration)
+Basic User Accounts (Admin/Attendant Roles)

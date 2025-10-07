@@ -1,0 +1,244 @@
+6. Specification Pattern - Book Search & Filtering
+
+// Specification Interface
+public interface BookSpecification {
+    boolean isSatisfiedBy(Book book);
+    String getDescription();
+}
+
+// Concrete Specifications
+public class TitleSpecification implements BookSpecification {
+    private final String title;
+    
+    public TitleSpecification(String title) {
+        this.title = title.toLowerCase();
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getTitle().toLowerCase().contains(title);
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Title contains: " + title;
+    }
+}
+
+public class AuthorSpecification implements BookSpecification {
+    private final String author;
+    
+    public AuthorSpecification(String author) {
+        this.author = author.toLowerCase();
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getAuthor().toLowerCase().contains(author);
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Author contains: " + author;
+    }
+}
+
+public class GenreSpecification implements BookSpecification {
+    private final String genre;
+    
+    public GenreSpecification(String genre) {
+        this.genre = genre.toLowerCase();
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getGenres().stream()
+            .anyMatch(g -> g.toLowerCase().contains(genre));
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Genre contains: " + genre;
+    }
+}
+
+public class AvailabilitySpecification implements BookSpecification {
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getAvailableCopies() > 0 && book.getStatus() == BookStatus.AVAILABLE;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Available for borrowing";
+    }
+}
+
+public class YearRangeSpecification implements BookSpecification {
+    private final int startYear;
+    private final int endYear;
+    
+    public YearRangeSpecification(int startYear, int endYear) {
+        this.startYear = startYear;
+        this.endYear = endYear;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getPublicationYear() >= startYear && 
+               book.getPublicationYear() <= endYear;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Published between " + startYear + " and " + endYear;
+    }
+}
+
+public class BookTypeSpecification implements BookSpecification {
+    private final BookType bookType;
+    
+    public BookTypeSpecification(BookType bookType) {
+        this.bookType = bookType;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getBookType() == bookType;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Book type: " + bookType;
+    }
+}
+
+// Composite Specifications
+public class AndSpecification implements BookSpecification {
+    private final List<BookSpecification> specifications;
+    
+    public AndSpecification(List<BookSpecification> specifications) {
+        this.specifications = specifications;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return specifications.stream()
+            .allMatch(spec -> spec.isSatisfiedBy(book));
+    }
+    
+    @Override
+    public String getDescription() {
+        return specifications.stream()
+            .map(BookSpecification::getDescription)
+            .collect(Collectors.joining(" AND "));
+    }
+}
+
+public class OrSpecification implements BookSpecification {
+    private final List<BookSpecification> specifications;
+    
+    public OrSpecification(List<BookSpecification> specifications) {
+        this.specifications = specifications;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return specifications.stream()
+            .anyMatch(spec -> spec.isSatisfiedBy(book));
+    }
+    
+    @Override
+    public String getDescription() {
+        return specifications.stream()
+            .map(BookSpecification::getDescription)
+            .collect(Collectors.joining(" OR "));
+    }
+}
+
+// Specification Builder
+public class BookSpecificationBuilder {
+    private List<BookSpecification> specifications = new ArrayList<>();
+    
+    public BookSpecificationBuilder withTitle(String title) {
+        if (title != null && !title.trim().isEmpty()) {
+            specifications.add(new TitleSpecification(title));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder withAuthor(String author) {
+        if (author != null && !author.trim().isEmpty()) {
+            specifications.add(new AuthorSpecification(author));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder withGenre(String genre) {
+        if (genre != null && !genre.trim().isEmpty()) {
+            specifications.add(new GenreSpecification(genre));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder withYearRange(Integer startYear, Integer endYear) {
+        if (startYear != null && endYear != null) {
+            specifications.add(new YearRangeSpecification(startYear, endYear));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder withBookType(BookType bookType) {
+        if (bookType != null) {
+            specifications.add(new BookTypeSpecification(bookType));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder availableOnly(boolean availableOnly) {
+        if (availableOnly) {
+            specifications.add(new AvailabilitySpecification());
+        }
+        return this;
+    }
+    
+    public BookSpecification build() {
+        return new AndSpecification(specifications);
+    }
+}
+
+// Specification Service
+@Service
+public class BookSearchService {
+    private final BookRepository bookRepository;
+    
+    @Autowired
+    public BookSearchService(BookRepository bookRepository) {
+        this.bookRepository = bookRepository;
+    }
+    
+    public List<Book> searchBooks(SearchCriteria criteria) {
+        BookSpecification spec = new BookSpecificationBuilder()
+            .withTitle(criteria.getTitle())
+            .withAuthor(criteria.getAuthor())
+            .withGenre(criteria.getGenre())
+            .withYearRange(criteria.getStartYear(), criteria.getEndYear())
+            .withBookType(criteria.getBookType())
+            .availableOnly(criteria.isAvailableOnly())
+            .build();
+        
+        List<Book> allBooks = bookRepository.findAll();
+        return allBooks.stream()
+            .filter(spec::isSatisfiedBy)
+            .collect(Collectors.toList());
+    }
+    
+    public List<Book> advancedSearch(List<BookSpecification> specifications) {
+        BookSpecification combinedSpec = new AndSpecification(specifications);
+        List<Book> allBooks = bookRepository.findAll();
+        return allBooks.stream()
+            .filter(combinedSpec::isSatisfiedBy)
+            .collect(Collectors.toList());
+    }
+}

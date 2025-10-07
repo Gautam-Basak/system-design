@@ -1,0 +1,75 @@
+public class MovieTicketSystem {
+    public static void main(String[] args) {
+        // Create address
+        Address cinemaAddress = new Address("123 Cinema St", "New York", "NY", "10001", "USA");
+        
+        // Create cinema hall seats
+        List<CinemaHallSeat> seats = new ArrayList<>();
+        for (int i = 1; i <= 50; i++) {
+            SeatType seatType = i <= 10 ? SeatType.PREMIUM : 
+                              i <= 45 ? SeatType.REGULAR : SeatType.ACCESSIBLE;
+            seats.add(new CinemaHallSeat("S" + i, seatType));
+        }
+        
+        // Create cinema hall
+        CinemaHall hall1 = new CinemaHall("Hall 1", 50, seats);
+        
+        // Create cinema
+        Cinema cinema = new Cinema("Cineplex", 1, cinemaAddress, Arrays.asList(hall1));
+        
+        // Create admin account
+        Account adminAccount = new Account("ADMIN001", "admin123", AccountStatus.ACTIVE);
+        Admin admin = new Admin("John Admin", cinemaAddress, "admin@cinema.com", "123-456-7890", adminAccount);
+        
+        // Add movie
+        Movie movie = admin.addMovie(
+            "The Matrix",
+            "A computer hacker learns from mysterious rebels about the true nature of his reality",
+            136,
+            "English",
+            LocalDate.of(1999, 3, 31),
+            "USA",
+            "Sci-Fi"
+        );
+        
+        // Add show
+        LocalDateTime showTime = LocalDateTime.of(2024, 1, 15, 18, 0);
+        Show show = admin.addShow(movie, hall1, showTime, showTime.plusMinutes(136));
+        
+        // Create customer
+        Guest guest = new Guest();
+        Customer customer = guest.registerAccount(
+            "Alice Customer",
+            cinemaAddress,
+            "alice@email.com",
+            "987-654-3210",
+            "password123"
+        );
+        
+        // Customer searches for available seats
+        List<ShowSeat> availableSeats = show.getAvailableSeats();
+        List<ShowSeat> selectedSeats = availableSeats.subList(0, Math.min(2, availableSeats.size()));
+        
+        // Customer makes booking
+        Booking booking = customer.makeBooking(show, selectedSeats);
+        
+        // Process payment
+        Payment payment = new Payment(
+            selectedSeats.stream().mapToDouble(ShowSeat::getPrice).sum(),
+            "TXN_123456",
+            PaymentStatus.PENDING
+        );
+        
+        boolean paymentSuccess = booking.makePayment(payment);
+        
+        if (paymentSuccess) {
+            System.out.println("Booking completed successfully!");
+            System.out.println("Booking Number: " + booking.getBookingNumber());
+            System.out.println("Total Amount: $" + payment.getAmount());
+        } else {
+            System.out.println("Booking failed due to payment issue");
+        }
+        
+        System.out.println("Movie ticket system demonstration completed!");
+    }
+}

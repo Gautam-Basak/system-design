@@ -1,0 +1,127 @@
+abstract class Person {
+    private String name;
+    private Address address;
+    private String email;
+    private String phone;
+    private Account account;
+    
+    public Person(String name, Address address, String email, String phone, Account account) {
+        this.name = name;
+        this.address = address;
+        this.email = email;
+        this.phone = phone;
+        this.account = account;
+    }
+    
+    // Getters
+    public String getName() { return name; }
+    public String getEmail() { return email; }
+    public Account getAccount() { return account; }
+}
+
+class Customer extends Person {
+    private List<Booking> bookings;
+    
+    public Customer(String name, Address address, String email, String phone, Account account) {
+        super(name, address, email, phone, account);
+        this.bookings = new ArrayList<>();
+    }
+    
+    public Booking makeBooking(Show show, List<ShowSeat> seats) {
+        if (seats.isEmpty()) {
+            throw new IllegalArgumentException("No seats selected for booking");
+        }
+        
+        double totalAmount = seats.stream().mapToDouble(ShowSeat::getPrice).sum();
+        Payment payment = new Payment(totalAmount, generateTransactionId(), PaymentStatus.PENDING);
+        
+        Booking booking = new Booking(
+            generateBookingNumber(),
+            seats.size(),
+            BookingStatus.PENDING,
+            show,
+            seats,
+            payment
+        );
+        
+        bookings.add(booking);
+        System.out.println("Booking created: " + booking.getBookingNumber());
+        return booking;
+    }
+    
+    public List<Booking> getBookings() {
+        return new ArrayList<>(bookings);
+    }
+    
+    public boolean cancelBooking(Booking booking) {
+        if (bookings.contains(booking)) {
+            booking.cancel();
+            bookings.remove(booking);
+            System.out.println("Booking cancelled: " + booking.getBookingNumber());
+            return true;
+        }
+        return false;
+    }
+    
+    private String generateBookingNumber() {
+        return "BKG_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    private String generateTransactionId() {
+        return "TXN_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}
+
+class Admin extends Person {
+    public Admin(String name, Address address, String email, String phone, Account account) {
+        super(name, address, email, phone, account);
+    }
+    
+    public Movie addMovie(String title, String description, int duration, String language, 
+                         LocalDate releaseDate, String country, String genre) {
+        Movie movie = new Movie(title, description, duration, language, releaseDate, country, genre, getAccount().getId());
+        System.out.println("Movie added: " + title);
+        return movie;
+    }
+    
+    public Show addShow(Movie movie, CinemaHall hall, LocalDateTime startTime, LocalDateTime endTime) {
+        Show show = new Show(generateShowId(), hall, movie, startTime, endTime);
+        hall.addShow(show);
+        movie.addShow(show);
+        System.out.println("Show added for movie: " + movie.getTitle());
+        return show;
+    }
+    
+    public boolean blockUser(Customer customer) {
+        customer.getAccount().setStatus(AccountStatus.BLOCKED);
+        System.out.println("Customer blocked: " + customer.getName());
+        return true;
+    }
+    
+    private String generateShowId() {
+        return "SHW_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}
+
+class FrontDeskOfficer extends Person {
+    public FrontDeskOfficer(String name, Address address, String email, String phone, Account account) {
+        super(name, address, email, phone, account);
+    }
+    
+    public Booking createBooking(Customer customer, Show show, List<ShowSeat> seats) {
+        return customer.makeBooking(show, seats);
+    }
+}
+
+class Guest {
+    public Customer registerAccount(String name, Address address, String email, String phone, String password) {
+        Account account = new Account(generateAccountId(), password, AccountStatus.ACTIVE);
+        Customer customer = new Customer(name, address, email, phone, account);
+        System.out.println("Guest registered as customer: " + name);
+        return customer;
+    }
+    
+    private String generateAccountId() {
+        return "CUST_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}

@@ -1,0 +1,51 @@
+@Service
+public class PaymentService {
+    
+    private final List<PaymentStrategy> paymentStrategies;
+    private final PaymentRepository paymentRepository;
+    private final List<BookingObserver> observers;
+    
+    @Autowired
+    public PaymentService(List<PaymentStrategy> paymentStrategies,
+                        PaymentRepository paymentRepository,
+                        List<BookingObserver> observers) {
+        this.paymentStrategies = paymentStrategies;
+        this.paymentRepository = paymentRepository;
+        this.observers = observers;
+    }
+    
+    public PaymentResult processPayment(Booking booking, PaymentMethod method, 
+                                      Map<String, String> paymentDetails) {
+        PaymentStrategy strategy = paymentStrategies.stream()
+            .filter(s -> s.supports(method))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("Unsupported payment method: " + method));
+        
+        PaymentRequest request = new PaymentRequest(
+            booking.getTotalAmount(),
+            method,
+            paymentDetails
+        );
+        
+        PaymentResult result = strategy.processPayment(request);
+        
+        // Save payment record
+        Payment payment = createPayment(booking, result);
+        paymentRepository.save(payment);
+        
+        // Notify observers
+        observers.forEach(observer -> observer.onPaymentProcessed(booking, payment));
+        
+        return result;
+    }
+    
+    private Payment createPayment(Booking booking, PaymentResult result) {
+        Payment payment = new Payment();
+        payment.setPaymentId("PAY_" + UUID.randomUUID().toString().substring(0, 8));
+        payment.setAmount(booking.getTotalAmount());
+        payment.setStatus(result.getStatus());
+        payment.setTransactionId(result.getTransactionId());
+        payment.setPaymentDate(LocalDateTime.now());
+        return payment;
+    }
+}

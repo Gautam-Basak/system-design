@@ -1,0 +1,34 @@
+
+Design Patterns Used:
+Strategy Pattern - Pricing strategies, discount strategies
+
+Factory Pattern - Different room types, booking types
+
+Observer Pattern - Notifications, inventory updates
+
+Repository Pattern - Data access abstraction
+
+Specification Pattern - Room search and filtering
+
+Decorator Pattern - Adding amenities to bookings
+
+Chain of Responsibility - Booking validation
+
+
+
+Core Functionalities:
+Hotel & Room Management
+
+Room Availability & Search
+
+Booking Creation & Management
+
+Dynamic Pricing & Offers
+
+Multi-guest Management
+
+Amenities & Services
+
+Check-in/Check-out Management
+
+Payment & Invoice Generation

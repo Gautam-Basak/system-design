@@ -1,0 +1,84 @@
+7. Chain of Responsibility for Validation
+java
+
+// Validation Chain
+public abstract class BookingValidator {
+    protected BookingValidator next;
+    
+    public BookingValidator setNext(BookingValidator next) {
+        this.next = next;
+        return next;
+    }
+    
+    public abstract ValidationResult validate(Booking booking);
+    
+    protected ValidationResult checkNext(Booking booking) {
+        if (next == null) {
+            return new ValidationResult(true, "All validations passed");
+        }
+        return next.validate(booking);
+    }
+}
+
+@Component
+public class SeatAvailabilityValidator extends BookingValidator {
+    
+    private final FlightRepository flightRepository;
+    
+    @Override
+    public ValidationResult validate(Booking booking) {
+        for (Seat seat : booking.getSelectedSeats()) {
+            if (!seat.isAvailable()) {
+                return new ValidationResult(false, "Seat " + seat.getSeatNumber() + " is not available");
+            }
+        }
+        return checkNext(booking);
+    }
+}
+
+@Component
+public class PassengerValidator extends BookingValidator {
+    
+    @Override
+    public ValidationResult validate(Booking booking) {
+        for (Passenger passenger : booking.getPassengers()) {
+            if (passenger.getPassportNumber() == null || passenger.getPassportNumber().isEmpty()) {
+                return new ValidationResult(false, "Passport number required for " + passenger.getName());
+            }
+        }
+        return checkNext(booking);
+    }
+}
+
+@Component
+public class PaymentValidator extends BookingValidator {
+    
+    @Override
+    public ValidationResult validate(Booking booking) {
+        if (booking.getTotalAmount() <= 0) {
+            return new ValidationResult(false, "Invalid booking amount");
+        }
+        return checkNext(booking);
+    }
+}
+
+// Validation Service
+@Service
+public class BookingValidationService {
+    
+    private BookingValidator validationChain;
+    
+    @Autowired
+    public BookingValidationService(SeatAvailabilityValidator seatValidator,
+                                  PassengerValidator passengerValidator,
+                                  PaymentValidator paymentValidator) {
+        // Build the chain
+        this.validationChain = seatValidator;
+        seatValidator.setNext(passengerValidator)
+                    .setNext(paymentValidator);
+    }
+    
+    public ValidationResult validateBooking(Booking booking) {
+        return validationChain.validate(booking);
+    }
+}

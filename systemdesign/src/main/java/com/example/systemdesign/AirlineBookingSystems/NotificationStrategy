@@ -1,0 +1,105 @@
+5. Observer Pattern for Notifications
+java
+
+
+// Observer Interface
+public interface BookingObserver {
+    void onBookingCreated(Booking booking);
+    void onBookingConfirmed(Booking booking);
+    void onBookingCancelled(Booking booking);
+    void onPaymentProcessed(Booking booking, Payment payment);
+}
+
+// Concrete Observers
+@Component
+public class EmailNotificationService implements BookingObserver {
+    
+    @Override
+    public void onBookingCreated(Booking booking) {
+        // Send booking confirmation email
+        System.out.println("Sending booking confirmation email for: " + booking.getBookingId());
+    }
+    
+    @Override
+    public void onBookingConfirmed(Booking booking) {
+        // Send ticket email
+        System.out.println("Sending e-ticket for: " + booking.getBookingId());
+    }
+    
+    @Override
+    public void onBookingCancelled(Booking booking) {
+        // Send cancellation email
+        System.out.println("Sending cancellation email for: " + booking.getBookingId());
+    }
+    
+    @Override
+    public void onPaymentProcessed(Booking booking, Payment payment) {
+        // Send payment confirmation
+        System.out.println("Sending payment confirmation for: " + booking.getBookingId());
+    }
+}
+
+@Component
+public class LoyaltyPointsService implements BookingObserver {
+    
+    private final LoyaltyRepository loyaltyRepository;
+    
+    @Autowired
+    public LoyaltyPointsService(LoyaltyRepository loyaltyRepository) {
+        this.loyaltyRepository = loyaltyRepository;
+    }
+    
+    @Override
+    public void onBookingConfirmed(Booking booking) {
+        // Award loyalty points
+        int points = (int) (booking.getTotalAmount() * 10); // 10 points per currency unit
+        
+        LoyaltyAccount account = booking.getPassengers().get(0).getLoyaltyAccount();
+        if (account != null) {
+            account.setPointsBalance(account.getPointsBalance() + points);
+            loyaltyRepository.save(account);
+            System.out.println("Awarded " + points + " loyalty points to " + account.getAccountId());
+        }
+    }
+    
+    @Override
+    public void onBookingCancelled(Booking booking) {
+        // Deduct loyalty points if booking was confirmed
+        // Implementation...
+    }
+}
+
+@Component
+public class InventoryManagementService implements BookingObserver {
+    
+    private final FlightRepository flightRepository;
+    
+    @Autowired
+    public InventoryManagementService(FlightRepository flightRepository) {
+        this.flightRepository = flightRepository;
+    }
+    
+    @Override
+    public void onBookingConfirmed(Booking booking) {
+        // Update seat inventory
+        booking.getSelectedSeats().forEach(seat -> {
+            flightRepository.updateSeatAvailability(
+                booking.getFlightNumber(), 
+                seat.getSeatNumber(), 
+                false
+            );
+        });
+    }
+    
+    @Override
+    public void onBookingCancelled(Booking booking) {
+        // Restore seat inventory
+        booking.getSelectedSeats().forEach(seat -> {
+            flightRepository.updateSeatAvailability(
+                booking.getFlightNumber(), 
+                seat.getSeatNumber(), 
+                true
+            );
+        });
+    }
+}

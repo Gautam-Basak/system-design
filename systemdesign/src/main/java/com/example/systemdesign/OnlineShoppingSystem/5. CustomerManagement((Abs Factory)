@@ -1,0 +1,76 @@
+// Abstract Customer Class
+abstract class Customer {
+    protected ShoppingCart cart;
+    protected List<Order> orders;
+    
+    public Customer() {
+        this.cart = new ShoppingCart();
+        this.orders = new ArrayList<>();
+    }
+    
+    public ShoppingCart getShoppingCart() {
+        return cart;
+    }
+    
+    public void addItemToCart(Item item) {
+        cart.addItem(item);
+        System.out.println("Item added to cart: " + item.getProductId());
+    }
+    
+    public void removeItemFromCart(Item item) {
+        cart.removeItem(item);
+        System.out.println("Item removed from cart: " + item.getProductId());
+    }
+    
+    public List<Order> getOrderHistory() {
+        return new ArrayList<>(orders);
+    }
+}
+
+// Guest Class
+class Guest extends Customer {
+    public Member registerAccount(String userName, String password, String name, String email, String phone, Address address) {
+        Account newAccount = new Account(userName, password, name, email, phone, address);
+        Member newMember = new Member(newAccount);
+        System.out.println("Guest registered as member: " + userName);
+        return newMember;
+    }
+}
+
+// Member Class
+class Member extends Customer {
+    private Account account;
+    
+    public Member(Account account) {
+        super();
+        this.account = account;
+    }
+    
+    public Order placeOrder() {
+        if (cart.getItems().isEmpty()) {
+            throw new IllegalStateException("Cannot place order with empty cart");
+        }
+        
+        Order order = new Order(generateOrderNumber(), OrderStatus.PENDING);
+        order.setItems(new ArrayList<>(cart.getItems()));
+        order.setTotalAmount(calculateTotal());
+        
+        orders.add(order);
+        cart.clearCart();
+        
+        System.out.println("Order placed successfully: " + order.getOrderNumber());
+        return order;
+    }
+    
+    private String generateOrderNumber() {
+        return "ORD_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    private double calculateTotal() {
+        return cart.getItems().stream()
+            .mapToDouble(item -> item.getPrice() * item.getQuantity())
+            .sum();
+    }
+    
+    public Account getAccount() { return account; }
+}

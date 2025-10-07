@@ -1,0 +1,176 @@
+3. Observer Pattern - Notifications & Inventory Updates
+java
+
+// Observer Interface
+public interface BookingObserver {
+    void onBookingCreated(HotelBooking booking);
+    void onBookingConfirmed(HotelBooking booking);
+    void onBookingCancelled(HotelBooking booking);
+    void onCheckIn(String bookingId);
+    void onCheckOut(String bookingId);
+    void onPaymentProcessed(HotelBooking booking, Payment payment);
+}
+
+// Concrete Observers
+@Component
+public class EmailNotificationService implements BookingObserver {
+    
+    @Override
+    public void onBookingCreated(HotelBooking booking) {
+        String recipient = booking.getGuests().get(0).getEmail();
+        String subject = "Booking Confirmation - " + booking.getBookingId();
+        String message = String.format(
+            "Dear %s, your booking has been created. Check-in: %s, Check-out: %s",
+            booking.getGuests().get(0).getName(),
+            booking.getCheckInDate(),
+            booking.getCheckOutDate()
+        );
+        sendEmail(recipient, subject, message);
+    }
+    
+    @Override
+    public void onBookingConfirmed(HotelBooking booking) {
+        // Send confirmation email with details
+    }
+    
+    @Override
+    public void onBookingCancelled(HotelBooking booking) {
+        // Send cancellation email
+    }
+    
+    @Override
+    public void onCheckIn(String bookingId) {
+        // Send check-in confirmation
+    }
+    
+    @Override
+    public void onCheckOut(String bookingId) {
+        // Send thank you email with invoice
+    }
+    
+    @Override
+    public void onPaymentProcessed(HotelBooking booking, Payment payment) {
+        // Send payment confirmation
+    }
+    
+    private void sendEmail(String recipient, String subject, String message) {
+        System.out.println("Sending email to: " + recipient);
+        System.out.println("Subject: " + subject);
+        System.out.println("Message: " + message);
+    }
+}
+
+@Component
+public class InventoryManagementService implements BookingObserver {
+    private final RoomRepository roomRepository;
+    
+    @Autowired
+    public InventoryManagementService(RoomRepository roomRepository) {
+        this.roomRepository = roomRepository;
+    }
+    
+    @Override
+    public void onBookingConfirmed(HotelBooking booking) {
+        // Mark rooms as booked for the duration
+        booking.getRooms().forEach(room -> {
+            markRoomUnavailable(room.getRoomId(), 
+                booking.getCheckInDate(), booking.getCheckOutDate(), "BOOKED");
+        });
+    }
+    
+    @Override
+    public void onBookingCancelled(HotelBooking booking) {
+        // Mark rooms as available again
+        booking.getRooms().forEach(room -> {
+            markRoomAvailable(room.getRoomId(), 
+                booking.getCheckInDate(), booking.getCheckOutDate());
+        });
+    }
+    
+    @Override
+    public void onCheckIn(String bookingId) {
+        // Update room status to OCCUPIED
+    }
+    
+    @Override
+    public void onCheckOut(String bookingId) {
+        // Update room status to AVAILABLE and trigger cleaning
+    }
+    
+    private void markRoomUnavailable(String roomId, LocalDate start, LocalDate end, String reason) {
+        // Implementation to update room availability
+    }
+    
+    private void markRoomAvailable(String roomId, LocalDate start, LocalDate end) {
+        // Implementation to restore room availability
+    }
+}
+
+@Component
+public class LoyaltyPointsService implements BookingObserver {
+    private final LoyaltyRepository loyaltyRepository;
+    
+    @Autowired
+    public LoyaltyPointsService(LoyaltyRepository loyaltyRepository) {
+        this.loyaltyRepository = loyaltyRepository;
+    }
+    
+    @Override
+    public void onBookingConfirmed(HotelBooking booking) {
+        Guest mainGuest = booking.getGuests().get(0);
+        if (mainGuest.getLoyaltyAccount() != null) {
+            int pointsEarned = (int) (booking.getTotalAmount() * 10); // 10 points per currency unit
+            awardLoyaltyPoints(mainGuest.getLoyaltyAccount(), pointsEarned, "Booking: " + booking.getBookingId());
+        }
+    }
+    
+    @Override
+    public void onCheckOut(String bookingId) {
+        // Award bonus points for completed stay
+    }
+    
+    private void awardLoyaltyPoints(LoyaltyAccount account, int points, String reason) {
+        account.setPointsBalance(account.getPointsBalance() + points);
+        loyaltyRepository.save(account);
+        System.out.println("Awarded " + points + " points to " + account.getAccountId());
+    }
+}
+
+// Observable Subject
+@Service
+public class BookingNotifier {
+    private final List<BookingObserver> observers = new ArrayList<>();
+    
+    @Autowired
+    public BookingNotifier(List<BookingObserver> observers) {
+        this.observers.addAll(observers);
+    }
+    
+    public void addObserver(BookingObserver observer) {
+        observers.add(observer);
+    }
+    
+    public void notifyBookingCreated(HotelBooking booking) {
+        observers.forEach(observer -> observer.onBookingCreated(booking));
+    }
+    
+    public void notifyBookingConfirmed(HotelBooking booking) {
+        observers.forEach(observer -> observer.onBookingConfirmed(booking));
+    }
+    
+    public void notifyBookingCancelled(HotelBooking booking) {
+        observers.forEach(observer -> observer.onBookingCancelled(booking));
+    }
+    
+    public void notifyCheckIn(String bookingId) {
+        observers.forEach(observer -> observer.onCheckIn(bookingId));
+    }
+    
+    public void notifyCheckOut(String bookingId) {
+        observers.forEach(observer -> observer.onCheckOut(bookingId));
+    }
+    
+    public void notifyPaymentProcessed(HotelBooking booking, Payment payment) {
+        observers.forEach(observer -> observer.onPaymentProcessed(booking, payment));
+    }
+}

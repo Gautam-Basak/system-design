@@ -1,0 +1,119 @@
+class CinemaHallSeat {
+    private String hallSeatId;
+    private SeatType seatType;
+    
+    public CinemaHallSeat(String hallSeatId, SeatType seatType) {
+        this.hallSeatId = hallSeatId;
+        this.seatType = seatType;
+    }
+    
+    // Getters
+    public String getHallSeatId() { return hallSeatId; }
+    public SeatType getSeatType() { return seatType; }
+}
+
+class ShowSeat extends CinemaHallSeat {
+    private String showSeatId;
+    private boolean isReserved;
+    private double price;
+    
+    public ShowSeat(String showSeatId, String hallSeatId, SeatType seatType, boolean isReserved, double price) {
+        super(hallSeatId, seatType);
+        this.showSeatId = showSeatId;
+        this.isReserved = isReserved;
+        this.price = price;
+    }
+    
+    // Getters and Setters
+    public String getShowSeatId() { return showSeatId; }
+    public boolean isReserved() { return isReserved; }
+    public void setReserved(boolean reserved) { isReserved = reserved; }
+    public double getPrice() { return price; }
+}
+
+class CinemaHall {
+    private String name;
+    private int totalSeats;
+    private List<CinemaHallSeat> seats;
+    private List<Show> shows;
+    
+    public CinemaHall(String name, int totalSeats, List<CinemaHallSeat> seats) {
+        this.name = name;
+        this.totalSeats = totalSeats;
+        this.seats = new ArrayList<>(seats);
+        this.shows = new ArrayList<>();
+    }
+    
+    public void addShow(Show show) {
+        shows.add(show);
+    }
+    
+    public List<Show> getShows() {
+        return new ArrayList<>(shows);
+    }
+    
+    public List<ShowSeat> createShowSeats(double basePrice) {
+        List<ShowSeat> showSeats = new ArrayList<>();
+        for (CinemaHallSeat seat : seats) {
+            double price = calculateSeatPrice(basePrice, seat.getSeatType());
+            ShowSeat showSeat = new ShowSeat(
+                generateShowSeatId(),
+                seat.getHallSeatId(),
+                seat.getSeatType(),
+                false,
+                price
+            );
+            showSeats.add(showSeat);
+        }
+        return showSeats;
+    }
+    
+    private double calculateSeatPrice(double basePrice, SeatType seatType) {
+        switch (seatType) {
+            case PREMIUM: return basePrice * 1.5;
+            case ACCESSIBLE: return basePrice * 1.2;
+            case EMERGENCY_EXIT: return basePrice * 1.1;
+            default: return basePrice;
+        }
+    }
+    
+    private String generateShowSeatId() {
+        return "SS_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    // Getters
+    public String getName() { return name; }
+    public int getTotalSeats() { return totalSeats; }
+    public List<CinemaHallSeat> getSeats() { return new ArrayList<>(seats); }
+}
+
+class Cinema {
+    private String name;
+    private int totalCinemaHalls;
+    private Address location;
+    private List<CinemaHall> halls;
+    
+    public Cinema(String name, int totalCinemaHalls, Address location, List<CinemaHall> halls) {
+        this.name = name;
+        this.totalCinemaHalls = totalCinemaHalls;
+        this.location = location;
+        this.halls = new ArrayList<>(halls);
+    }
+    
+    public void addHall(CinemaHall hall) {
+        halls.add(hall);
+        totalCinemaHalls++;
+    }
+    
+    public List<Show> getAllShows() {
+        return halls.stream()
+            .flatMap(hall -> hall.getShows().stream())
+            .collect(Collectors.toList());
+    }
+    
+    // Getters
+    public String getName() { return name; }
+    public int getTotalCinemaHalls() { return totalCinemaHalls; }
+    public Address getLocation() { return location; }
+    public List<CinemaHall> getHalls() { return new ArrayList<>(halls); }
+}

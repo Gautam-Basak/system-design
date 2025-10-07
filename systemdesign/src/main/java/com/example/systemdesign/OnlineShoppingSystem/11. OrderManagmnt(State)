@@ -1,0 +1,112 @@
+// OrderLog Class
+class OrderLog {
+    private String orderNumber;
+    private LocalDate creationDate;
+    private OrderStatus status;
+    private String note;
+    
+    public OrderLog(String orderNumber, OrderStatus status, String note) {
+        this.orderNumber = orderNumber;
+        this.status = status;
+        this.note = note;
+        this.creationDate = LocalDate.now();
+    }
+    
+    // Getters
+    public OrderStatus getStatus() { return status; }
+    public String getNote() { return note; }
+}
+
+// Order Class
+class Order {
+    private String orderNumber;
+    private OrderStatus status;
+    private LocalDate orderDate;
+    private List<OrderLog> orderLogs;
+    private List<Item> items;
+    private double totalAmount;
+    private Shipment shipment;
+    private Payment payment;
+    
+    public Order(String orderNumber, OrderStatus status) {
+        this.orderNumber = orderNumber;
+        this.status = status;
+        this.orderDate = LocalDate.now();
+        this.orderLogs = new ArrayList<>();
+        this.items = new ArrayList<>();
+        this.totalAmount = 0.0;
+        
+        // Add initial log
+        addOrderLog(new OrderLog(orderNumber, status, "Order created"));
+    }
+    
+    public void sendForShipment() {
+        if (this.shipment == null) {
+            throw new IllegalStateException("No shipment associated with this order");
+        }
+        this.status = OrderStatus.SHIPPED;
+        addOrderLog(new OrderLog(orderNumber, status, "Order shipped"));
+        System.out.println("Order " + orderNumber + " sent for shipment");
+    }
+    
+    public void makePayment(Payment payment) {
+        this.payment = payment;
+        if (payment.processPayment()) {
+            this.status = OrderStatus.PENDING;
+            addOrderLog(new OrderLog(orderNumber, status, "Payment processed successfully"));
+            System.out.println("Payment processed for order: " + orderNumber);
+        } else {
+            addOrderLog(new OrderLog(orderNumber, OrderStatus.CANCELED, "Payment failed"));
+            System.out.println("Payment failed for order: " + orderNumber);
+        }
+    }
+    
+    public void addOrderLog(OrderLog orderLog) {
+        orderLogs.add(orderLog);
+    }
+    
+    public void setItems(List<Item> items) {
+        this.items = new ArrayList<>(items);
+        this.totalAmount = items.stream()
+            .mapToDouble(Item::getTotalPrice)
+            .sum();
+    }
+    
+    public void setShipment(Shipment shipment) {
+        this.shipment = shipment;
+    }
+    
+    // Getters
+    public String getOrderNumber() { return orderNumber; }
+    public OrderStatus getStatus() { return status; }
+    public double getTotalAmount() { return totalAmount; }
+    public List<Item> getItems() { return new ArrayList<>(items); }
+}
+
+// Payment Class
+class Payment {
+    private String paymentId;
+    private double amount;
+    private PaymentStatus status;
+    private String paymentMethod;
+    
+    public Payment(String paymentId, double amount, String paymentMethod) {
+        this.paymentId = paymentId;
+        this.amount = amount;
+        this.paymentMethod = paymentMethod;
+        this.status = PaymentStatus.PENDING;
+    }
+    
+    public boolean processPayment() {
+        // Simulate payment processing
+        System.out.println("Processing " + paymentMethod + " payment: $" + amount);
+        
+        // 90% success rate for simulation
+        boolean success = Math.random() > 0.1;
+        this.status = success ? PaymentStatus.COMPLETED : PaymentStatus.DECLINED;
+        
+        return success;
+    }
+    
+    public PaymentStatus getStatus() { return status; }
+}

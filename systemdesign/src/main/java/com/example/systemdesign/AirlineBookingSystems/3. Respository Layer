@@ -1,0 +1,31 @@
+2. Repository Pattern Implementation
+java
+
+
+// Repository Interfaces
+public interface FlightRepository {
+    Optional<Flight> findByNumber(String flightNumber);
+    List<Flight> searchFlights(String departure, String arrival, LocalDate date);
+    List<Seat> findAvailableSeats(String flightNumber, SeatClass seatClass);
+    void updateSeatAvailability(String flightNumber, String seatNumber, boolean available);
+}
+
+public interface BookingRepository {
+    Optional<Booking> findById(String bookingId);
+    List<Booking> findByPassenger(String passengerId);
+    List<Booking> findByFlightAndDate(String flightNumber, LocalDate date);
+    Booking save(Booking booking);
+    void updateStatus(String bookingId, BookingStatus status);
+}
+
+public interface PassengerRepository {
+    Optional<Passenger> findById(String passengerId);
+    Optional<Passenger> findByEmail(String email);
+    Passenger save(Passenger passenger);
+}
+
+public interface PaymentRepository {
+    Payment save(Payment payment);
+    Optional<Payment> findByBookingId(String bookingId);
+    void updateStatus(String paymentId, PaymentStatus status);
+}

@@ -293,6 +293,10 @@ public class PricingContext {
         return discountedPrice;
     }
 }
+
+
+
+
 2. Factory Pattern - Room Types & Booking Types
 java
 // Room Factory
@@ -441,6 +445,10 @@ public class BookingFactory {
         return "HTL_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
     }
 }
+
+
+
+
 3. Observer Pattern - Notifications & Inventory Updates
 java
 // Observer Interface
@@ -616,6 +624,9 @@ public class BookingNotifier {
         observers.forEach(observer -> observer.onPaymentProcessed(booking, payment));
     }
 }
+
+
+
 4. Repository Pattern - Data Access Abstraction
 java
 // Repository Interfaces
@@ -679,6 +690,9 @@ public class JpaBookingRepository implements BookingRepository {
         }
     }
 }
+
+
+
 5. Specification Pattern - Room Search & Filtering
 java
 // Enhanced Specification Interface
@@ -841,6 +855,10 @@ public class RoomSearchService {
             .collect(Collectors.toList());
     }
 }
+
+
+
+
 6. Decorator Pattern - Adding Amenities to Bookings
 java
 // Booking Decorator Base Class
@@ -969,6 +987,10 @@ public class AmenityDecoratorService {
         return decoratedBooking;
     }
 }
+
+
+
+
 7. Chain of Responsibility - Booking Validation
 java
 // Validation Handler Interface
@@ -1132,6 +1154,10 @@ public class ValidationResult {
     public boolean isValid() { return isValid; }
     public String getMessage() { return message; }
 }
+
+
+
+
 8. Main Booking Service Integrating All Patterns
 java
 @Service

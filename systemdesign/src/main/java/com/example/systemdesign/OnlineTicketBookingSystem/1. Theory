@@ -1,0 +1,26 @@
+Design Patterns Used:
+Factory Pattern - Person hierarchy (Customer/Admin/FrontDeskOfficer)
+
+Strategy Pattern - Search interface with Catalog implementation
+
+State Pattern - BookingStatus, PaymentStatus enums
+
+Composite Pattern - Cinema → CinemaHall → CinemaHallSeat hierarchy
+
+Observer Pattern - Notification system for bookings
+
+
+Core Functionalities:
+User Management - Customer, Admin, FrontDeskOfficer accounts
+
+Movie & Show Management - Add movies, create shows
+
+Cinema Management - Halls, seats, and locations
+
+Search System - Movie search by multiple criteria
+
+Booking System - Seat selection and payment processing
+
+Payment Processing - Transaction management
+
+Seat Management - Seat reservation and availability

@@ -1,0 +1,165 @@
+7. Chain of Responsibility - Booking Validation
+java
+
+
+// Validation Handler Interface
+public interface BookingValidationHandler {
+    ValidationResult validate(HotelBooking booking);
+    void setNextHandler(BookingValidationHandler nextHandler);
+}
+
+// Abstract Base Handler
+public abstract class AbstractValidationHandler implements BookingValidationHandler {
+    protected BookingValidationHandler nextHandler;
+    
+    @Override
+    public void setNextHandler(BookingValidationHandler nextHandler) {
+        this.nextHandler = nextHandler;
+    }
+    
+    protected ValidationResult validateNext(HotelBooking booking) {
+        if (nextHandler == null) {
+            return new ValidationResult(true, "All validations passed");
+        }
+        return nextHandler.validate(booking);
+    }
+}
+
+// Concrete Handlers
+@Component
+public class AvailabilityValidationHandler extends AbstractValidationHandler {
+    private final RoomRepository roomRepository;
+    
+    @Autowired
+    public AvailabilityValidationHandler(RoomRepository roomRepository) {
+        this.roomRepository = roomRepository;
+    }
+    
+    @Override
+    public ValidationResult validate(HotelBooking booking) {
+        for (Room room : booking.getRooms()) {
+            if (!isRoomAvailable(room, booking.getCheckInDate(), booking.getCheckOutDate())) {
+                return new ValidationResult(false, 
+                    "Room " + room.getRoomNumber() + " is not available for selected dates");
+            }
+        }
+        return validateNext(booking);
+    }
+    
+    private boolean isRoomAvailable(Room room, LocalDate checkIn, LocalDate checkOut) {
+        // Implementation to check room availability
+        return true;
+    }
+}
+
+@Component
+public class CapacityValidationHandler extends AbstractValidationHandler {
+    
+    @Override
+    public ValidationResult validate(HotelBooking booking) {
+        for (Room room : booking.getRooms()) {
+            int roomCapacity = room.getCapacity();
+            int guestsInRoom = Math.min(booking.getGuests().size(), roomCapacity);
+            
+            if (guestsInRoom > roomCapacity) {
+                return new ValidationResult(false,
+                    "Room " + room.getRoomNumber() + " exceeds capacity. Max: " + roomCapacity);
+            }
+        }
+        return validateNext(booking);
+    }
+}
+
+@Component
+public class DateValidationHandler extends AbstractValidationHandler {
+    
+    @Override
+    public ValidationResult validate(HotelBooking booking) {
+        if (booking.getCheckInDate().isBefore(LocalDate.now())) {
+            return new ValidationResult(false, "Check-in date cannot be in the past");
+        }
+        
+        if (booking.getCheckOutDate().isBefore(booking.getCheckInDate())) {
+            return new ValidationResult(false, "Check-out date must be after check-in date");
+        }
+        
+        if (ChronoUnit.DAYS.between(booking.getCheckInDate(), booking.getCheckOutDate()) > 30) {
+            return new ValidationResult(false, "Maximum stay duration is 30 days");
+        }
+        
+        return validateNext(booking);
+    }
+}
+
+@Component
+public class GuestValidationHandler extends AbstractValidationHandler {
+    
+    @Override
+    public ValidationResult validate(HotelBooking booking) {
+        for (Guest guest : booking.getGuests()) {
+            if (guest.getName() == null || guest.getName().trim().isEmpty()) {
+                return new ValidationResult(false, "Guest name is required");
+            }
+            
+            if (guest.getEmail() == null || !isValidEmail(guest.getEmail())) {
+                return new ValidationResult(false, "Valid email is required for all guests");
+            }
+            
+            // Age validation for certain room types
+            if (isMinor(guest) && !isFamilyBooking(booking)) {
+                return new ValidationResult(false, "Minors require family booking");
+            }
+        }
+        return validateNext(booking);
+    }
+    
+    private boolean isValidEmail(String email) {
+        return email.contains("@") && email.contains(".");
+    }
+    
+    private boolean isMinor(Guest guest) {
+        return ChronoUnit.YEARS.between(guest.getDateOfBirth().toInstant()
+            .atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now()) < 18;
+    }
+    
+    private boolean isFamilyBooking(HotelBooking booking) {
+        return booking instanceof FamilyBooking;
+    }
+}
+
+// Validation Chain Builder
+@Service
+public class BookingValidationChain {
+    private BookingValidationHandler chain;
+    
+    @Autowired
+    public BookingValidationChain(AvailabilityValidationHandler availabilityHandler,
+                                CapacityValidationHandler capacityHandler,
+                                DateValidationHandler dateHandler,
+                                GuestValidationHandler guestHandler) {
+        // Build the chain
+        this.chain = availabilityHandler;
+        availabilityHandler.setNextHandler(capacityHandler);
+        capacityHandler.setNextHandler(dateHandler);
+        dateHandler.setNextHandler(guestHandler);
+    }
+    
+    public ValidationResult validateBooking(HotelBooking booking) {
+        return chain.validate(booking);
+    }
+}
+
+// Validation Result
+public class ValidationResult {
+    private final boolean isValid;
+    private final String message;
+    
+    public ValidationResult(boolean isValid, String message) {
+        this.isValid = isValid;
+        this.message = message;
+    }
+    
+    // Getters
+    public boolean isValid() { return isValid; }
+    public String getMessage() { return message; }
+}

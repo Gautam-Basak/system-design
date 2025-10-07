@@ -1,0 +1,60 @@
+10. Supporting Classes
+java
+
+// EntrancePanel.java
+public class EntrancePanel {
+    private String id;
+    
+    public EntrancePanel(String id) {
+        this.id = id;
+    }
+    
+    public ParkingTicket printTicket(Vehicle vehicle) {
+        ParkingLot parkingLot = ParkingLot.getInstance("Main Parking", null);
+        return parkingLot.getNewParkingTicket(vehicle);
+    }
+    
+    // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+}
+
+// ExitPanel.java
+public class ExitPanel {
+    private String id;
+    
+    public ExitPanel(String id) {
+        this.id = id;
+    }
+    
+    public boolean processPayment(ParkingTicket ticket, PaymentType paymentType) {
+        ParkingLot parkingLot = ParkingLot.getInstance("Main Parking", null);
+        return parkingLot.processPayment(ticket, paymentType);
+    }
+    
+    // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+}
+
+// CustomerInfoPanel.java
+public class CustomerInfoPanel {
+    private String id;
+    
+    public CustomerInfoPanel(String id) {
+        this.id = id;
+    }
+    
+    public void showMessage(String message) {
+        System.out.println("Customer Info Panel " + id + ": " + message);
+    }
+    
+    // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+}
+
+// PaymentType.java
+public enum PaymentType {
+    CASH, CREDIT_CARD, DEBIT_CARD, UPI, WALLET
+}

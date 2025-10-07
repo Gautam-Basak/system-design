@@ -1,0 +1,33 @@
+
+Design Patterns Used:
+Strategy Pattern - Book search strategies, fine calculation strategies
+
+Factory Pattern - Different book types, member types
+
+Observer Pattern - Notifications, reservation updates
+
+Repository Pattern - Data access abstraction
+
+Specification Pattern - Book search and filtering
+
+Decorator Pattern - Adding features to books/members
+
+Chain of Responsibility - Book validation, member validation
+
+
+Core Functionalities:
+Book Management (Add, Update, Remove)
+
+Member Management (Registration, Types)
+
+Book Search & Filtering
+
+Borrowing & Returning
+
+Reservation System
+
+Fine Management
+
+Notification System
+
+Reporting & Analytics

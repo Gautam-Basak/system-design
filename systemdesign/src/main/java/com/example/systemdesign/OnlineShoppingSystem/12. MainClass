@@ -1,0 +1,49 @@
+// Main class to demonstrate functionality
+public class ECommerceSystem {
+    public static void main(String[] args) {
+        // Create addresses
+        Address address = new Address("123 Main St", "New York", "NY", "10001", "USA");
+        
+        // Create account
+        Account account = new Account("john_doe", "password123", "John Doe", 
+                                    "john@email.com", "123-456-7890", address);
+        
+        // Create member
+        Member member = new Member(account);
+        
+        // Create product category
+        ProductCategory electronics = new ProductCategory("Electronics", "Electronic devices");
+        
+        // Create products
+        Product laptop = new Product("P001", "Laptop", "High-performance laptop", 
+                                   999.99, electronics, account);
+        Product phone = new Product("P002", "Smartphone", "Latest smartphone", 
+                                  699.99, electronics, account);
+        
+        // Create catalog and add products
+        Catalog catalog = new Catalog();
+        catalog.addProduct(laptop);
+        catalog.addProduct(phone);
+        
+        // Member adds items to cart
+        Item laptopItem = new Item("P001", "Laptop", 1, 999.99);
+        Item phoneItem = new Item("P002", "Smartphone", 2, 699.99);
+        
+        member.addItemToCart(laptopItem);
+        member.addItemToCart(phoneItem);
+        
+        // Place order
+        Order order = member.placeOrder();
+        
+        // Create payment and process
+        Payment payment = new Payment("PAY001", order.getTotalAmount(), "Credit Card");
+        order.makePayment(payment);
+        
+        // Create shipment
+        Shipment shipment = new Shipment("SHIP001", "Express", address);
+        order.setShipment(shipment);
+        order.sendForShipment();
+        
+        System.out.println("E-commerce system demonstration completed!");
+    }
+}

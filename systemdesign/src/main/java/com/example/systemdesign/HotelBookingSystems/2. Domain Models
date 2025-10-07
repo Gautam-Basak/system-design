@@ -1,0 +1,111 @@
+1. Domain Models
+java
+
+// Enums
+public enum RoomType {
+    STANDARD, DELUXE, SUITE, EXECUTIVE_SUITE, PRESIDENTIAL_SUITE
+}
+
+public enum BookingStatus {
+    PENDING, CONFIRMED, CHECKED_IN, CHECKED_OUT, CANCELLED, NO_SHOW
+}
+
+public enum BedType {
+    SINGLE, DOUBLE, QUEEN, KING, TWIN
+}
+
+public enum AmenityType {
+    POOL, SPA, GYM, BREAKFAST, WIFI, PARKING, ROOM_SERVICE
+}
+
+// Domain Entities
+public class Hotel {
+    private String hotelId;
+    private String name;
+    private String address;
+    private String city;
+    private String country;
+    private Double rating;
+    private List<Room> rooms;
+    private List<Amenity> amenities;
+    private ContactInfo contactInfo;
+    
+    // Getters and setters
+}
+
+public class Room {
+    private String roomId;
+    private String roomNumber;
+    private RoomType roomType;
+    private int capacity;
+    private List<BedType> bedTypes;
+    private double basePrice;
+    private List<Amenity> roomAmenities;
+    private List<RoomUnavailablePeriod> unavailablePeriods;
+    
+    // Getters and setters
+}
+
+public class RoomUnavailablePeriod {
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private String reason; // Maintenance, Renovation, etc.
+}
+
+public class Booking {
+    private String bookingId;
+    private String hotelId;
+    private String guestId;
+    private List<Guest> guests;
+    private List<Room> rooms;
+    private LocalDate checkInDate;
+    private LocalDate checkOutDate;
+    private int numberOfNights;
+    private BookingStatus status;
+    private double totalAmount;
+    private double taxes;
+    private double discount;
+    private double finalAmount;
+    private List<Amenity> selectedAmenities;
+    private Payment payment;
+    private String specialRequests;
+    
+    // Getters and setters
+}
+
+public class Guest {
+    private String guestId;
+    private String name;
+    private String email;
+    private String phone;
+    private String idType; // Passport, Driver's License
+    private String idNumber;
+    private Date dateOfBirth;
+    private LoyaltyAccount loyaltyAccount;
+    
+    // Getters and setters
+}
+
+public class Amenity {
+    private String amenityId;
+    private AmenityType type;
+    private String name;
+    private String description;
+    private double price;
+    private boolean included; // Whether included in room price
+    
+    // Getters and setters
+}
+
+public class PricingRule {
+    private String ruleId;
+    private String hotelId;
+    private RoomType roomType;
+    private LocalDate startDate;
+    private LocalDate endDate;
+    private double priceMultiplier;
+    private double fixedPrice;
+    private String ruleType; // SEASONAL, WEEKEND, SPECIAL_EVENT
+    
+    // Getters and setters
+}

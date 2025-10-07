@@ -1,0 +1,215 @@
+7. Parking Floor
+
+java
+// ParkingFloor.java
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class ParkingFloor {
+    private String name;
+    private Map<String, ParkingSpot> handicappedSpots;
+    private Map<String, ParkingSpot> compactSpots;
+    private Map<String, ParkingSpot> largeSpots;
+    private Map<String, ParkingSpot> motorbikeSpots;
+    private Map<String, ParkingSpot> electricSpots;
+    private Map<String, CustomerInfoPanel> infoPortals;
+    private int freeHandicappedSpotCount;
+    private int freeCompactSpotCount;
+    private int freeLargeSpotCount;
+    private int freeMotorbikeSpotCount;
+    private int freeElectricSpotCount;
+    private ParkingDisplayBoard displayBoard;
+    
+    public ParkingFloor(String name) {
+        this.name = name;
+        this.handicappedSpots = new ConcurrentHashMap<>();
+        this.compactSpots = new ConcurrentHashMap<>();
+        this.largeSpots = new ConcurrentHashMap<>();
+        this.motorbikeSpots = new ConcurrentHashMap<>();
+        this.electricSpots = new ConcurrentHashMap<>();
+        this.infoPortals = new ConcurrentHashMap<>();
+        this.freeHandicappedSpotCount = 0;
+        this.freeCompactSpotCount = 0;
+        this.freeLargeSpotCount = 0;
+        this.freeMotorbikeSpotCount = 0;
+        this.freeElectricSpotCount = 0;
+        this.displayBoard = new ParkingDisplayBoard(name + "_DisplayBoard");
+    }
+    
+    public synchronized void addParkingSpot(ParkingSpot spot) {
+        switch (spot.getType()) {
+            case HANDICAPPED:
+                handicappedSpots.put(spot.getNumber(), spot);
+                freeHandicappedSpotCount++;
+                updateDisplayBoardForHandicapped();
+                break;
+            case COMPACT:
+                compactSpots.put(spot.getNumber(), spot);
+                freeCompactSpotCount++;
+                updateDisplayBoardForCompact();
+                break;
+            case LARGE:
+                largeSpots.put(spot.getNumber(), spot);
+                freeLargeSpotCount++;
+                updateDisplayBoardForLarge();
+                break;
+            case MOTORBIKE:
+                motorbikeSpots.put(spot.getNumber(), spot);
+                freeMotorbikeSpotCount++;
+                updateDisplayBoardForMotorbike();
+                break;
+            case ELECTRIC:
+                electricSpots.put(spot.getNumber(), spot);
+                freeElectricSpotCount++;
+                updateDisplayBoardForElectric();
+                break;
+            default:
+                throw new IllegalArgumentException("Wrong parking spot type");
+        }
+    }
+    
+    public synchronized void assignVehicleToSpot(Vehicle vehicle, ParkingSpot spot) {
+        spot.assignVehicle(vehicle);
+        
+        switch (spot.getType()) {
+            case HANDICAPPED:
+                freeHandicappedSpotCount--;
+                updateDisplayBoardForHandicapped();
+                break;
+            case COMPACT:
+                freeCompactSpotCount--;
+                updateDisplayBoardForCompact();
+                break;
+            case LARGE:
+                freeLargeSpotCount--;
+                updateDisplayBoardForLarge();
+                break;
+            case MOTORBIKE:
+                freeMotorbikeSpotCount--;
+                updateDisplayBoardForMotorbike();
+                break;
+            case ELECTRIC:
+                freeElectricSpotCount--;
+                updateDisplayBoardForElectric();
+                break;
+            default:
+                throw new IllegalArgumentException("Wrong parking spot type!");
+        }
+    }
+    
+    public synchronized void freeSpot(ParkingSpot spot) {
+        spot.removeVehicle();
+        
+        switch (spot.getType()) {
+            case HANDICAPPED:
+                freeHandicappedSpotCount++;
+                updateDisplayBoardForHandicapped();
+                break;
+            case COMPACT:
+                freeCompactSpotCount++;
+                updateDisplayBoardForCompact();
+                break;
+            case LARGE:
+                freeLargeSpotCount++;
+                updateDisplayBoardForLarge();
+                break;
+            case MOTORBIKE:
+                freeMotorbikeSpotCount++;
+                updateDisplayBoardForMotorbike();
+                break;
+            case ELECTRIC:
+                freeElectricSpotCount++;
+                updateDisplayBoardForElectric();
+                break;
+            default:
+                throw new IllegalArgumentException("Wrong parking spot type!");
+        }
+    }
+    
+    private void updateDisplayBoardForHandicapped() {
+        if (displayBoard.getHandicappedFreeSpot() == null || 
+            !displayBoard.getHandicappedFreeSpot().isFree()) {
+            for (ParkingSpot spot : handicappedSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setHandicappedFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    private void updateDisplayBoardForCompact() {
+        if (displayBoard.getCompactFreeSpot() == null || 
+            !displayBoard.getCompactFreeSpot().isFree()) {
+            for (ParkingSpot spot : compactSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setCompactFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    private void updateDisplayBoardForLarge() {
+        if (displayBoard.getLargeFreeSpot() == null || 
+            !displayBoard.getLargeFreeSpot().isFree()) {
+            for (ParkingSpot spot : largeSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setLargeFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    private void updateDisplayBoardForMotorbike() {
+        if (displayBoard.getMotorbikeFreeSpot() == null || 
+            !displayBoard.getMotorbikeFreeSpot().isFree()) {
+            for (ParkingSpot spot : motorbikeSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setMotorbikeFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    private void updateDisplayBoardForElectric() {
+        if (displayBoard.getElectricFreeSpot() == null || 
+            !displayBoard.getElectricFreeSpot().isFree()) {
+            for (ParkingSpot spot : electricSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setElectricFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    public boolean isFull() {
+        return freeHandicappedSpotCount == 0 && freeCompactSpotCount == 0 &&
+               freeLargeSpotCount == 0 && freeMotorbikeSpotCount == 0 &&
+               freeElectricSpotCount == 0;
+    }
+    
+    // Getters and setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public Map<String, ParkingSpot> getHandicappedSpots() { return handicappedSpots; }
+    public Map<String, ParkingSpot> getCompactSpots() { return compactSpots; }
+    public Map<String, ParkingSpot> getLargeSpots() { return largeSpots; }
+    public Map<String, ParkingSpot> getMotorbikeSpots() { return motorbikeSpots; }
+    public Map<String, ParkingSpot> getElectricSpots() { return electricSpots; }
+    public int getFreeHandicappedSpotCount() { return freeHandicappedSpotCount; }
+    public int getFreeCompactSpotCount() { return freeCompactSpotCount; }
+    public int getFreeLargeSpotCount() { return freeLargeSpotCount; }
+    public int getFreeMotorbikeSpotCount() { return freeMotorbikeSpotCount; }
+    public int getFreeElectricSpotCount() { return freeElectricSpotCount; }
+    public ParkingDisplayBoard getDisplayBoard() { return displayBoard; }
+    public void setDisplayBoard(ParkingDisplayBoard displayBoard) { this.displayBoard = displayBoard; }
+}

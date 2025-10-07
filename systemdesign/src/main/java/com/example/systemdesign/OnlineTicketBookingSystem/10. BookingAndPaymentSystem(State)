@@ -1,0 +1,117 @@
+class Payment {
+    private String paymentId;
+    private double amount;
+    private String transactionId;
+    private PaymentStatus status;
+    private LocalDate createdOn;
+    
+    public Payment(double amount, String transactionId, PaymentStatus status) {
+        this.paymentId = generatePaymentId();
+        this.amount = amount;
+        this.transactionId = transactionId;
+        this.status = status;
+        this.createdOn = LocalDate.now();
+    }
+    
+    public boolean processPayment() {
+        System.out.println("Processing payment of $" + amount + " with transaction: " + transactionId);
+        
+        // Simulate payment processing
+        boolean success = Math.random() > 0.1; // 90% success rate
+        this.status = success ? PaymentStatus.COMPLETED : PaymentStatus.DECLINED;
+        
+        if (success) {
+            System.out.println("Payment successful: " + transactionId);
+        } else {
+            System.out.println("Payment declined: " + transactionId);
+        }
+        
+        return success;
+    }
+    
+    public boolean refundPayment() {
+        if (this.status == PaymentStatus.COMPLETED) {
+            this.status = PaymentStatus.REFUNDED;
+            System.out.println("Payment refunded: " + transactionId);
+            return true;
+        }
+        return false;
+    }
+    
+    private String generatePaymentId() {
+        return "PAY_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    // Getters
+    public double getAmount() { return amount; }
+    public PaymentStatus getStatus() { return status; }
+    public String getTransactionId() { return transactionId; }
+}
+
+class Booking {
+    private String bookingNumber;
+    private int numberOfSeats;
+    private LocalDate createdOn;
+    private BookingStatus status;
+    private Show show;
+    private List<ShowSeat> seats;
+    private Payment payment;
+    
+    public Booking(String bookingNumber, int numberOfSeats, BookingStatus status,
+                  Show show, List<ShowSeat> seats, Payment payment) {
+        this.bookingNumber = bookingNumber;
+        this.numberOfSeats = numberOfSeats;
+        this.status = status;
+        this.show = show;
+        this.seats = new ArrayList<>(seats);
+        this.payment = payment;
+        this.createdOn = LocalDate.now();
+    }
+    
+    public boolean makePayment(Payment payment) {
+        if (payment.processPayment()) {
+            this.payment = payment;
+            this.status = BookingStatus.CONFIRMED;
+            
+            // Mark seats as reserved
+            if (!show.reserveSeats(seats)) {
+                System.out.println("Failed to reserve seats for booking: " + bookingNumber);
+                return false;
+            }
+            
+            System.out.println("Booking confirmed: " + bookingNumber);
+            return true;
+        }
+        return false;
+    }
+    
+    public boolean cancel() {
+        if (this.status == BookingStatus.CONFIRMED || this.status == BookingStatus.PENDING) {
+            this.status = BookingStatus.CANCELED;
+            
+            // Release seats
+            show.releaseSeats(seats);
+            
+            // Refund payment if exists
+            if (payment != null && payment.getStatus() == PaymentStatus.COMPLETED) {
+                payment.refundPayment();
+            }
+            
+            System.out.println("Booking cancelled: " + bookingNumber);
+            return true;
+        }
+        return false;
+    }
+    
+    public void assignSeats(List<ShowSeat> seats) {
+        this.seats = new ArrayList<>(seats);
+        this.numberOfSeats = seats.size();
+    }
+    
+    // Getters
+    public String getBookingNumber() { return bookingNumber; }
+    public BookingStatus getStatus() { return status; }
+    public Show getShow() { return show; }
+    public List<ShowSeat> getSeats() { return new ArrayList<>(seats); }
+    public Payment getPayment() { return payment; }
+}

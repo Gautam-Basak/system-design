@@ -1,0 +1,39 @@
+3. Factory Pattern for Booking Types
+java
+
+
+// Booking Factory
+@Component
+public class BookingFactory {
+    
+    public Booking createFlightBooking(Passenger passenger, Flight flight, 
+                                     List<Seat> selectedSeats) {
+        Booking booking = new Booking();
+        booking.setBookingId(generateBookingId());
+        booking.setPassengerId(passenger.getPassengerId());
+        booking.setFlightNumber(flight.getFlightNumber());
+        booking.setBookingDate(LocalDateTime.now());
+        booking.setStatus(BookingStatus.PENDING);
+        booking.setPassengers(List.of(passenger));
+        booking.setSelectedSeats(selectedSeats);
+        booking.setTotalAmount(calculateTotalAmount(flight, selectedSeats));
+        
+        return booking;
+    }
+    
+    public Booking createGroupBooking(List<Passenger> passengers, Flight flight,
+                                    Map<Passenger, Seat> passengerSeats) {
+        // Implementation for group booking
+        return null;
+    }
+    
+    private double calculateTotalAmount(Flight flight, List<Seat> seats) {
+        return seats.stream()
+            .mapToDouble(Seat::getPrice)
+            .sum();
+    }
+    
+    private String generateBookingId() {
+        return "BKG_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}

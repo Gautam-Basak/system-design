@@ -1,0 +1,87 @@
+5. Repository Pattern - Data Access Abstraction
+
+// Repository Interfaces
+public interface BookRepository {
+    Optional<Book> findByIsbn(String isbn);
+    List<Book> findByTitle(String title);
+    List<Book> findByAuthor(String author);
+    List<Book> findByGenre(String genre);
+    List<Book> findByPublicationYear(int year);
+    List<Book> findByStatus(BookStatus status);
+    List<Book> findAll();
+    Book save(Book book);
+    void delete(String isbn);
+}
+
+public interface MemberRepository {
+    Optional<Member> findById(String memberId);
+    Optional<Member> findByEmail(String email);
+    List<Member> findByName(String name);
+    List<Member> findByType(MemberType type);
+    List<Member> findMembersWithFines();
+    Member save(Member member);
+    void updateMembership(String memberId, LocalDate newExpiry);
+}
+
+public interface BorrowRecordRepository {
+    Optional<BorrowRecord> findById(String borrowId);
+    List<BorrowRecord> findByMemberId(String memberId);
+    List<BorrowRecord> findByBookIsbn(String isbn);
+    List<BorrowRecord> findOverdueRecords();
+    List<BorrowRecord> findActiveBorrows(String memberId);
+    BorrowRecord save(BorrowRecord record);
+    void updateReturnDate(String borrowId, LocalDate returnDate);
+}
+
+public interface ReservationRepository {
+    List<Reservation> findByBookIsbn(String isbn);
+    List<Reservation> findByMemberId(String memberId);
+    List<Reservation> findActiveReservations();
+    Reservation save(Reservation reservation);
+    void cancelReservation(String reservationId);
+}
+
+public interface FineRepository {
+    List<Fine> findByMemberId(String memberId);
+    List<Fine> findUnpaidFines(String memberId);
+    Fine save(Fine fine);
+    void markAsPaid(String fineId, LocalDate paidDate);
+}
+
+// JPA Implementation Example
+@Repository
+public class JpaBookRepository implements BookRepository {
+    @PersistenceContext
+    private EntityManager entityManager;
+    
+    @Override
+    public Optional<Book> findByIsbn(String isbn) {
+        return Optional.ofNullable(entityManager.find(Book.class, isbn));
+    }
+    
+    @Override
+    public List<Book> findByAuthor(String author) {
+        return entityManager.createQuery(
+            "SELECT b FROM Book b WHERE b.author LIKE :author", Book.class)
+            .setParameter("author", "%" + author + "%")
+            .getResultList();
+    }
+    
+    @Override
+    public List<Book> findByStatus(BookStatus status) {
+        return entityManager.createQuery(
+            "SELECT b FROM Book b WHERE b.status = :status", Book.class)
+            .setParameter("status", status)
+            .getResultList();
+    }
+    
+    @Override
+    public Book save(Book book) {
+        if (book.getIsbn() == null) {
+            entityManager.persist(book);
+            return book;
+        } else {
+            return entityManager.merge(book);
+        }
+    }
+}

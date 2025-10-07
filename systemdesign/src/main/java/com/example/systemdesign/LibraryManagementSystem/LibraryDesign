@@ -1,0 +1,1754 @@
+
+Design Patterns Used:
+Strategy Pattern - Book search strategies, fine calculation strategies
+
+Factory Pattern - Different book types, member types
+
+Observer Pattern - Notifications, reservation updates
+
+Repository Pattern - Data access abstraction
+
+Specification Pattern - Book search and filtering
+
+Decorator Pattern - Adding features to books/members
+
+Chain of Responsibility - Book validation, member validation
+
+Core Functionalities:
+Book Management (Add, Update, Remove)
+
+Member Management (Registration, Types)
+
+Book Search & Filtering
+
+Borrowing & Returning
+
+Reservation System
+
+Fine Management
+
+Notification System
+
+Reporting & Analytics
+
+
+
+1. Domain Models
+
+// Enums
+public enum BookStatus {
+    AVAILABLE, BORROWED, RESERVED, UNDER_MAINTENANCE
+}
+
+public enum BookType {
+    REGULAR, REFERENCE, PERIODICAL, EBOOK, AUDIOBOOK
+}
+
+public enum MemberType {
+    STUDENT, FACULTY, STAFF, GUEST
+}
+
+public enum ReservationStatus {
+    ACTIVE, FULFILLED, CANCELLED, EXPIRED
+}
+
+public enum NotificationType {
+    DUE_DATE_REMINDER, BOOK_AVAILABLE, FINE_ALERT, NEW_ARRIVAL
+}
+
+// Domain Entities
+public class Book {
+    private String isbn;
+    private String title;
+    private String author;
+    private String publisher;
+    private int publicationYear;
+    private BookType bookType;
+    private BookStatus status;
+    private List<String> genres;
+    private int totalCopies;
+    private int availableCopies;
+    private LocalDate acquisitionDate;
+    private double price;
+    
+    // Getters and setters
+}
+
+public class BookItem extends Book {
+    private String barcode;
+    private String rackNumber;
+    private boolean isReferenceOnly;
+    private LocalDate dueDate;
+    
+    // Getters and setters
+}
+
+public class Member {
+    private String memberId;
+    private String name;
+    private String email;
+    private String phone;
+    private MemberType memberType;
+    private LocalDate registrationDate;
+    private LocalDate membershipExpiry;
+    private int maxBooksAllowed;
+    private int currentBooksBorrowed;
+    private double totalFines;
+    
+    // Getters and setters
+}
+
+public class BorrowRecord {
+    private String borrowId;
+    private String memberId;
+    private String bookBarcode;
+    private LocalDate borrowDate;
+    private LocalDate dueDate;
+    private LocalDate returnDate;
+    private double fineAmount;
+    private boolean isReturned;
+    
+    // Getters and setters
+}
+
+public class Reservation {
+    private String reservationId;
+    private String memberId;
+    private String bookIsbn;
+    private LocalDate reservationDate;
+    private LocalDate notificationDate;
+    private ReservationStatus status;
+    private int positionInQueue;
+    
+    // Getters and setters
+}
+
+public class Fine {
+    private String fineId;
+    private String memberId;
+    private String borrowId;
+    private double amount;
+    private LocalDate issuedDate;
+    private LocalDate paidDate;
+    private boolean isPaid;
+    private String reason;
+    
+    // Getters and setters
+}
+
+public class Librarian {
+    private String librarianId;
+    private String name;
+    private String email;
+    private String department;
+    private List<String> permissions;
+    
+    // Getters and setters
+}
+
+
+
+2. Strategy Pattern - Search & Fine Calculation
+
+// Search Strategy Interface
+public interface SearchStrategy {
+    List<Book> search(String query, List<Book> bookCatalog);
+    String getStrategyName();
+}
+
+// Title Search Strategy
+@Component
+public class TitleSearchStrategy implements SearchStrategy {
+    @Override
+    public List<Book> search(String query, List<Book> bookCatalog) {
+        return bookCatalog.stream()
+            .filter(book -> book.getTitle().toLowerCase().contains(query.toLowerCase()))
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Title Search";
+    }
+}
+
+// Author Search Strategy
+@Component
+public class AuthorSearchStrategy implements SearchStrategy {
+    @Override
+    public List<Book> search(String query, List<Book> bookCatalog) {
+        return bookCatalog.stream()
+            .filter(book -> book.getAuthor().toLowerCase().contains(query.toLowerCase()))
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Author Search";
+    }
+}
+
+// ISBN Search Strategy
+@Component
+public class ISBNSearchStrategy implements SearchStrategy {
+    @Override
+    public List<Book> search(String query, List<Book> bookCatalog) {
+        return bookCatalog.stream()
+            .filter(book -> book.getIsbn().equals(query))
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "ISBN Search";
+    }
+}
+
+// Genre Search Strategy
+@Component
+public class GenreSearchStrategy implements SearchStrategy {
+    @Override
+    public List<Book> search(String query, List<Book> bookCatalog) {
+        return bookCatalog.stream()
+            .filter(book -> book.getGenres().stream()
+                .anyMatch(genre -> genre.toLowerCase().contains(query.toLowerCase())))
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Genre Search";
+    }
+}
+
+// Fine Calculation Strategy Interface
+public interface FineCalculationStrategy {
+    double calculateFine(LocalDate dueDate, LocalDate returnDate, BookType bookType);
+    String getStrategyName();
+}
+
+// Standard Fine Strategy
+@Component
+public class StandardFineStrategy implements FineCalculationStrategy {
+    private static final double DAILY_FINE_RATE = 1.0;
+    
+    @Override
+    public double calculateFine(LocalDate dueDate, LocalDate returnDate, BookType bookType) {
+        if (returnDate.isBefore(dueDate) || returnDate.isEqual(dueDate)) {
+            return 0.0;
+        }
+        
+        long daysOverdue = ChronoUnit.DAYS.between(dueDate, returnDate);
+        return daysOverdue * DAILY_FINE_RATE;
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Standard Fine Calculation";
+    }
+}
+
+// Reference Book Fine Strategy
+@Component
+public class ReferenceBookFineStrategy implements FineCalculationStrategy {
+    private static final double DAILY_FINE_RATE = 5.0; // Higher fine for reference books
+    
+    @Override
+    public double calculateFine(LocalDate dueDate, LocalDate returnDate, BookType bookType) {
+        if (returnDate.isBefore(dueDate) || returnDate.isEqual(dueDate)) {
+            return 0.0;
+        }
+        
+        long daysOverdue = ChronoUnit.DAYS.between(dueDate, returnDate);
+        return daysOverdue * DAILY_FINE_RATE;
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Reference Book Fine Calculation";
+    }
+}
+
+// Faculty Fine Strategy (More lenient)
+@Component
+public class FacultyFineStrategy implements FineCalculationStrategy {
+    private static final double DAILY_FINE_RATE = 0.5; // Lower fine for faculty
+    
+    @Override
+    public double calculateFine(LocalDate dueDate, LocalDate returnDate, BookType bookType) {
+        if (returnDate.isBefore(dueDate) || returnDate.isEqual(dueDate)) {
+            return 0.0;
+        }
+        
+        long daysOverdue = ChronoUnit.DAYS.between(dueDate, returnDate);
+        // 7-day grace period for faculty
+        if (daysOverdue <= 7) {
+            return 0.0;
+        }
+        return (daysOverdue - 7) * DAILY_FINE_RATE;
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Faculty Fine Calculation";
+    }
+}
+
+// Search Context
+@Service
+public class SearchContext {
+    private final Map<String, SearchStrategy> searchStrategies;
+    
+    @Autowired
+    public SearchContext(List<SearchStrategy> strategies) {
+        this.searchStrategies = strategies.stream()
+            .collect(Collectors.toMap(SearchStrategy::getStrategyName, Function.identity()));
+    }
+    
+    public List<Book> search(String strategyName, String query, List<Book> catalog) {
+        SearchStrategy strategy = searchStrategies.get(strategyName);
+        if (strategy == null) {
+            throw new IllegalArgumentException("Unknown search strategy: " + strategyName);
+        }
+        return strategy.search(query, catalog);
+    }
+    
+    public List<String> getAvailableStrategies() {
+        return new ArrayList<>(searchStrategies.keySet());
+    }
+}
+
+// Fine Context
+@Service
+public class FineContext {
+    private final Map<BookType, FineCalculationStrategy> fineStrategies;
+    private final Map<MemberType, FineCalculationStrategy> memberFineStrategies;
+    
+    @Autowired
+    public FineContext(List<FineCalculationStrategy> strategies) {
+        this.fineStrategies = Map.of(
+            BookType.REFERENCE, new ReferenceBookFineStrategy(),
+            BookType.REGULAR, new StandardFineStrategy()
+        );
+        
+        this.memberFineStrategies = Map.of(
+            MemberType.FACULTY, new FacultyFineStrategy(),
+            MemberType.STUDENT, new StandardFineStrategy(),
+            MemberType.STAFF, new StandardFineStrategy()
+        );
+    }
+    
+    public double calculateFine(Member member, Book book, LocalDate dueDate, LocalDate returnDate) {
+        // First check member-specific strategy
+        FineCalculationStrategy strategy = memberFineStrategies.get(member.getMemberType());
+        if (strategy != null) {
+            return strategy.calculateFine(dueDate, returnDate, book.getBookType());
+        }
+        
+        // Fall back to book-type strategy
+        strategy = fineStrategies.get(book.getBookType());
+        if (strategy != null) {
+            return strategy.calculateFine(dueDate, returnDate, book.getBookType());
+        }
+        
+        // Default strategy
+        return new StandardFineStrategy().calculateFine(dueDate, returnDate, book.getBookType());
+    }
+}
+
+
+
+
+3. Factory Pattern - Book Types & Member Types
+
+// Book Factory
+@Component
+public class BookFactory {
+    
+    public Book createBook(BookType type, String isbn, String title, String author, 
+                          String publisher, int publicationYear) {
+        switch (type) {
+            case REGULAR:
+                return createRegularBook(isbn, title, author, publisher, publicationYear);
+            case REFERENCE:
+                return createReferenceBook(isbn, title, author, publisher, publicationYear);
+            case PERIODICAL:
+                return createPeriodical(isbn, title, author, publisher, publicationYear);
+            case EBOOK:
+                return createEBook(isbn, title, author, publisher, publicationYear);
+            case AUDIOBOOK:
+                return createAudioBook(isbn, title, author, publisher, publicationYear);
+            default:
+                throw new IllegalArgumentException("Unknown book type: " + type);
+        }
+    }
+    
+    private Book createRegularBook(String isbn, String title, String author, 
+                                  String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.REGULAR);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(1);
+        book.setAvailableCopies(1);
+        book.setAcquisitionDate(LocalDate.now());
+        return book;
+    }
+    
+    private Book createReferenceBook(String isbn, String title, String author,
+                                   String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.REFERENCE);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(1);
+        book.setAvailableCopies(1);
+        book.setAcquisitionDate(LocalDate.now());
+        // Reference books cannot be borrowed
+        BookItem item = new BookItem();
+        item.setReferenceOnly(true);
+        return book;
+    }
+    
+    private Book createPeriodical(String isbn, String title, String author,
+                                String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.PERIODICAL);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(1);
+        book.setAvailableCopies(1);
+        book.setAcquisitionDate(LocalDate.now());
+        // Shorter loan period for periodicals
+        return book;
+    }
+    
+    private Book createEBook(String isbn, String title, String author,
+                           String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.EBOOK);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(Integer.MAX_VALUE); // Unlimited copies
+        book.setAvailableCopies(Integer.MAX_VALUE);
+        book.setAcquisitionDate(LocalDate.now());
+        return book;
+    }
+    
+    private Book createAudioBook(String isbn, String title, String author,
+                               String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.AUDIOBOOK);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(1);
+        book.setAvailableCopies(1);
+        book.setAcquisitionDate(LocalDate.now());
+        return book;
+    }
+}
+
+// Member Factory
+@Component
+public class MemberFactory {
+    
+    public Member createMember(MemberType type, String name, String email, String phone) {
+        switch (type) {
+            case STUDENT:
+                return createStudentMember(name, email, phone);
+            case FACULTY:
+                return createFacultyMember(name, email, phone);
+            case STAFF:
+                return createStaffMember(name, email, phone);
+            case GUEST:
+                return createGuestMember(name, email, phone);
+            default:
+                throw new IllegalArgumentException("Unknown member type: " + type);
+        }
+    }
+    
+    private Member createStudentMember(String name, String email, String phone) {
+        Member member = new Member();
+        member.setMemberId(generateMemberId("STU"));
+        member.setName(name);
+        member.setEmail(email);
+        member.setPhone(phone);
+        member.setMemberType(MemberType.STUDENT);
+        member.setRegistrationDate(LocalDate.now());
+        member.setMembershipExpiry(LocalDate.now().plusYears(1));
+        member.setMaxBooksAllowed(5);
+        member.setCurrentBooksBorrowed(0);
+        member.setTotalFines(0.0);
+        return member;
+    }
+    
+    private Member createFacultyMember(String name, String email, String phone) {
+        Member member = new Member();
+        member.setMemberId(generateMemberId("FAC"));
+        member.setName(name);
+        member.setEmail(email);
+        member.setPhone(phone);
+        member.setMemberType(MemberType.FACULTY);
+        member.setRegistrationDate(LocalDate.now());
+        member.setMembershipExpiry(LocalDate.now().plusYears(2));
+        member.setMaxBooksAllowed(10);
+        member.setCurrentBooksBorrowed(0);
+        member.setTotalFines(0.0);
+        return member;
+    }
+    
+    private Member createStaffMember(String name, String email, String phone) {
+        Member member = new Member();
+        member.setMemberId(generateMemberId("STA"));
+        member.setName(name);
+        member.setEmail(email);
+        member.setPhone(phone);
+        member.setMemberType(MemberType.STAFF);
+        member.setRegistrationDate(LocalDate.now());
+        member.setMembershipExpiry(LocalDate.now().plusYears(1));
+        member.setMaxBooksAllowed(8);
+        member.setCurrentBooksBorrowed(0);
+        member.setTotalFines(0.0);
+        return member;
+    }
+    
+    private Member createGuestMember(String name, String email, String phone) {
+        Member member = new Member();
+        member.setMemberId(generateMemberId("GST"));
+        member.setName(name);
+        member.setEmail(email);
+        member.setPhone(phone);
+        member.setMemberType(MemberType.GUEST);
+        member.setRegistrationDate(LocalDate.now());
+        member.setMembershipExpiry(LocalDate.now().plusMonths(6));
+        member.setMaxBooksAllowed(3);
+        member.setCurrentBooksBorrowed(0);
+        member.setTotalFines(0.0);
+        return member;
+    }
+    
+    private String generateMemberId(String prefix) {
+        return prefix + "_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}
+
+
+
+
+4. Observer Pattern - Notifications & System Updates
+
+// Observer Interface
+public interface LibraryObserver {
+    void onBookBorrowed(Book book, Member member, LocalDate dueDate);
+    void onBookReturned(Book book, Member member);
+    void onBookReserved(Book book, Member member);
+    void onBookAvailable(Book book, List<Member> waitingList);
+    void onDueDateApproaching(BorrowRecord record);
+    void onFineIssued(Fine fine);
+    void onNewBookAdded(Book book);
+}
+
+// Concrete Observers
+@Component
+public class EmailNotificationService implements LibraryObserver {
+    
+    @Override
+    public void onBookBorrowed(Book book, Member member, LocalDate dueDate) {
+        String subject = "Book Borrowed - " + book.getTitle();
+        String message = String.format(
+            "Dear %s,\nYou have successfully borrowed '%s'.\nDue Date: %s",
+            member.getName(), book.getTitle(), dueDate
+        );
+        sendEmail(member.getEmail(), subject, message);
+    }
+    
+    @Override
+    public void onBookReturned(Book book, Member member) {
+        String subject = "Book Returned - " + book.getTitle();
+        String message = String.format(
+            "Dear %s,\nYou have successfully returned '%s'.",
+            member.getName(), book.getTitle()
+        );
+        sendEmail(member.getEmail(), subject, message);
+    }
+    
+    @Override
+    public void onBookReserved(Book book, Member member) {
+        String subject = "Book Reserved - " + book.getTitle();
+        String message = String.format(
+            "Dear %s,\nYou have reserved '%s'. We will notify you when it's available.",
+            member.getName(), book.getTitle()
+        );
+        sendEmail(member.getEmail(), subject, message);
+    }
+    
+    @Override
+    public void onBookAvailable(Book book, List<Member> waitingList) {
+        for (Member member : waitingList) {
+            String subject = "Book Available - " + book.getTitle();
+            String message = String.format(
+                "Dear %s,\nThe book '%s' you reserved is now available.",
+                member.getName(), book.getTitle()
+            );
+            sendEmail(member.getEmail(), subject, message);
+        }
+    }
+    
+    @Override
+    public void onDueDateApproaching(BorrowRecord record) {
+        // Send reminder 3 days before due date
+        String subject = "Due Date Reminder";
+        String message = String.format(
+            "Reminder: Book is due on %s. Please return or renew.",
+            record.getDueDate()
+        );
+        // Implementation to get member email
+        // sendEmail(memberEmail, subject, message);
+    }
+    
+    @Override
+    public void onFineIssued(Fine fine) {
+        // Send fine notification
+    }
+    
+    @Override
+    public void onNewBookAdded(Book book) {
+        // Notify members interested in this genre
+    }
+    
+    private void sendEmail(String recipient, String subject, String message) {
+        System.out.println("Sending email to: " + recipient);
+        System.out.println("Subject: " + subject);
+        System.out.println("Message: " + message);
+    }
+}
+
+@Component
+public class InventoryManagementService implements LibraryObserver {
+    private final BookRepository bookRepository;
+    
+    @Autowired
+    public InventoryManagementService(BookRepository bookRepository) {
+        this.bookRepository = bookRepository;
+    }
+    
+    @Override
+    public void onBookBorrowed(Book book, Member member, LocalDate dueDate) {
+        // Update available copies
+        book.setAvailableCopies(book.getAvailableCopies() - 1);
+        if (book.getAvailableCopies() == 0) {
+            book.setStatus(BookStatus.BORROWED);
+        }
+        bookRepository.save(book);
+    }
+    
+    @Override
+    public void onBookReturned(Book book, Member member) {
+        // Update available copies
+        book.setAvailableCopies(book.getAvailableCopies() + 1);
+        if (book.getAvailableCopies() > 0) {
+            book.setStatus(BookStatus.AVAILABLE);
+        }
+        bookRepository.save(book);
+    }
+    
+    @Override
+    public void onBookReserved(Book book, Member member) {
+        // Update reservation count
+    }
+    
+    @Override
+    public void onBookAvailable(Book book, List<Member> waitingList) {
+        // Handle waiting list notifications
+    }
+    
+    // Other methods implementation...
+}
+
+@Component
+public class AnalyticsService implements LibraryObserver {
+    private final AnalyticsRepository analyticsRepository;
+    
+    @Autowired
+    public AnalyticsService(AnalyticsRepository analyticsRepository) {
+        this.analyticsRepository = analyticsRepository;
+    }
+    
+    @Override
+    public void onBookBorrowed(Book book, Member member, LocalDate dueDate) {
+        // Record borrowing statistics
+        analyticsRepository.recordBorrowing(book, member, LocalDateTime.now());
+    }
+    
+    @Override
+    public void onBookReturned(Book book, Member member) {
+        // Record return statistics
+        analyticsRepository.recordReturn(book, member, LocalDateTime.now());
+    }
+    
+    @Override
+    public void onNewBookAdded(Book book) {
+        // Record new acquisition
+        analyticsRepository.recordNewBook(book, LocalDateTime.now());
+    }
+    
+    // Other methods implementation...
+}
+
+// Observable Subject
+@Service
+public class LibraryNotifier {
+    private final List<LibraryObserver> observers = new ArrayList<>();
+    
+    @Autowired
+    public LibraryNotifier(List<LibraryObserver> observers) {
+        this.observers.addAll(observers);
+    }
+    
+    public void addObserver(LibraryObserver observer) {
+        observers.add(observer);
+    }
+    
+    public void notifyBookBorrowed(Book book, Member member, LocalDate dueDate) {
+        observers.forEach(observer -> observer.onBookBorrowed(book, member, dueDate));
+    }
+    
+    public void notifyBookReturned(Book book, Member member) {
+        observers.forEach(observer -> observer.onBookReturned(book, member));
+    }
+    
+    public void notifyBookReserved(Book book, Member member) {
+        observers.forEach(observer -> observer.onBookReserved(book, member));
+    }
+    
+    public void notifyBookAvailable(Book book, List<Member> waitingList) {
+        observers.forEach(observer -> observer.onBookAvailable(book, waitingList));
+    }
+    
+    public void notifyDueDateApproaching(BorrowRecord record) {
+        observers.forEach(observer -> observer.onDueDateApproaching(record));
+    }
+    
+    public void notifyFineIssued(Fine fine) {
+        observers.forEach(observer -> observer.onFineIssued(fine));
+    }
+    
+    public void notifyNewBookAdded(Book book) {
+        observers.forEach(observer -> observer.onNewBookAdded(book));
+    }
+}
+
+
+
+
+5. Repository Pattern - Data Access Abstraction
+
+// Repository Interfaces
+public interface BookRepository {
+    Optional<Book> findByIsbn(String isbn);
+    List<Book> findByTitle(String title);
+    List<Book> findByAuthor(String author);
+    List<Book> findByGenre(String genre);
+    List<Book> findByPublicationYear(int year);
+    List<Book> findByStatus(BookStatus status);
+    List<Book> findAll();
+    Book save(Book book);
+    void delete(String isbn);
+}
+
+public interface MemberRepository {
+    Optional<Member> findById(String memberId);
+    Optional<Member> findByEmail(String email);
+    List<Member> findByName(String name);
+    List<Member> findByType(MemberType type);
+    List<Member> findMembersWithFines();
+    Member save(Member member);
+    void updateMembership(String memberId, LocalDate newExpiry);
+}
+
+public interface BorrowRecordRepository {
+    Optional<BorrowRecord> findById(String borrowId);
+    List<BorrowRecord> findByMemberId(String memberId);
+    List<BorrowRecord> findByBookIsbn(String isbn);
+    List<BorrowRecord> findOverdueRecords();
+    List<BorrowRecord> findActiveBorrows(String memberId);
+    BorrowRecord save(BorrowRecord record);
+    void updateReturnDate(String borrowId, LocalDate returnDate);
+}
+
+public interface ReservationRepository {
+    List<Reservation> findByBookIsbn(String isbn);
+    List<Reservation> findByMemberId(String memberId);
+    List<Reservation> findActiveReservations();
+    Reservation save(Reservation reservation);
+    void cancelReservation(String reservationId);
+}
+
+public interface FineRepository {
+    List<Fine> findByMemberId(String memberId);
+    List<Fine> findUnpaidFines(String memberId);
+    Fine save(Fine fine);
+    void markAsPaid(String fineId, LocalDate paidDate);
+}
+
+// JPA Implementation Example
+@Repository
+public class JpaBookRepository implements BookRepository {
+    @PersistenceContext
+    private EntityManager entityManager;
+    
+    @Override
+    public Optional<Book> findByIsbn(String isbn) {
+        return Optional.ofNullable(entityManager.find(Book.class, isbn));
+    }
+    
+    @Override
+    public List<Book> findByAuthor(String author) {
+        return entityManager.createQuery(
+            "SELECT b FROM Book b WHERE b.author LIKE :author", Book.class)
+            .setParameter("author", "%" + author + "%")
+            .getResultList();
+    }
+    
+    @Override
+    public List<Book> findByStatus(BookStatus status) {
+        return entityManager.createQuery(
+            "SELECT b FROM Book b WHERE b.status = :status", Book.class)
+            .setParameter("status", status)
+            .getResultList();
+    }
+    
+    @Override
+    public Book save(Book book) {
+        if (book.getIsbn() == null) {
+            entityManager.persist(book);
+            return book;
+        } else {
+            return entityManager.merge(book);
+        }
+    }
+}
+
+
+
+
+6. Specification Pattern - Book Search & Filtering
+
+// Specification Interface
+public interface BookSpecification {
+    boolean isSatisfiedBy(Book book);
+    String getDescription();
+}
+
+// Concrete Specifications
+public class TitleSpecification implements BookSpecification {
+    private final String title;
+    
+    public TitleSpecification(String title) {
+        this.title = title.toLowerCase();
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getTitle().toLowerCase().contains(title);
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Title contains: " + title;
+    }
+}
+
+public class AuthorSpecification implements BookSpecification {
+    private final String author;
+    
+    public AuthorSpecification(String author) {
+        this.author = author.toLowerCase();
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getAuthor().toLowerCase().contains(author);
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Author contains: " + author;
+    }
+}
+
+public class GenreSpecification implements BookSpecification {
+    private final String genre;
+    
+    public GenreSpecification(String genre) {
+        this.genre = genre.toLowerCase();
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getGenres().stream()
+            .anyMatch(g -> g.toLowerCase().contains(genre));
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Genre contains: " + genre;
+    }
+}
+
+public class AvailabilitySpecification implements BookSpecification {
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getAvailableCopies() > 0 && book.getStatus() == BookStatus.AVAILABLE;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Available for borrowing";
+    }
+}
+
+public class YearRangeSpecification implements BookSpecification {
+    private final int startYear;
+    private final int endYear;
+    
+    public YearRangeSpecification(int startYear, int endYear) {
+        this.startYear = startYear;
+        this.endYear = endYear;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getPublicationYear() >= startYear && 
+               book.getPublicationYear() <= endYear;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Published between " + startYear + " and " + endYear;
+    }
+}
+
+public class BookTypeSpecification implements BookSpecification {
+    private final BookType bookType;
+    
+    public BookTypeSpecification(BookType bookType) {
+        this.bookType = bookType;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return book.getBookType() == bookType;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Book type: " + bookType;
+    }
+}
+
+// Composite Specifications
+public class AndSpecification implements BookSpecification {
+    private final List<BookSpecification> specifications;
+    
+    public AndSpecification(List<BookSpecification> specifications) {
+        this.specifications = specifications;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return specifications.stream()
+            .allMatch(spec -> spec.isSatisfiedBy(book));
+    }
+    
+    @Override
+    public String getDescription() {
+        return specifications.stream()
+            .map(BookSpecification::getDescription)
+            .collect(Collectors.joining(" AND "));
+    }
+}
+
+public class OrSpecification implements BookSpecification {
+    private final List<BookSpecification> specifications;
+    
+    public OrSpecification(List<BookSpecification> specifications) {
+        this.specifications = specifications;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Book book) {
+        return specifications.stream()
+            .anyMatch(spec -> spec.isSatisfiedBy(book));
+    }
+    
+    @Override
+    public String getDescription() {
+        return specifications.stream()
+            .map(BookSpecification::getDescription)
+            .collect(Collectors.joining(" OR "));
+    }
+}
+
+// Specification Builder
+public class BookSpecificationBuilder {
+    private List<BookSpecification> specifications = new ArrayList<>();
+    
+    public BookSpecificationBuilder withTitle(String title) {
+        if (title != null && !title.trim().isEmpty()) {
+            specifications.add(new TitleSpecification(title));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder withAuthor(String author) {
+        if (author != null && !author.trim().isEmpty()) {
+            specifications.add(new AuthorSpecification(author));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder withGenre(String genre) {
+        if (genre != null && !genre.trim().isEmpty()) {
+            specifications.add(new GenreSpecification(genre));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder withYearRange(Integer startYear, Integer endYear) {
+        if (startYear != null && endYear != null) {
+            specifications.add(new YearRangeSpecification(startYear, endYear));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder withBookType(BookType bookType) {
+        if (bookType != null) {
+            specifications.add(new BookTypeSpecification(bookType));
+        }
+        return this;
+    }
+    
+    public BookSpecificationBuilder availableOnly(boolean availableOnly) {
+        if (availableOnly) {
+            specifications.add(new AvailabilitySpecification());
+        }
+        return this;
+    }
+    
+    public BookSpecification build() {
+        return new AndSpecification(specifications);
+    }
+}
+
+// Specification Service
+@Service
+public class BookSearchService {
+    private final BookRepository bookRepository;
+    
+    @Autowired
+    public BookSearchService(BookRepository bookRepository) {
+        this.bookRepository = bookRepository;
+    }
+    
+    public List<Book> searchBooks(SearchCriteria criteria) {
+        BookSpecification spec = new BookSpecificationBuilder()
+            .withTitle(criteria.getTitle())
+            .withAuthor(criteria.getAuthor())
+            .withGenre(criteria.getGenre())
+            .withYearRange(criteria.getStartYear(), criteria.getEndYear())
+            .withBookType(criteria.getBookType())
+            .availableOnly(criteria.isAvailableOnly())
+            .build();
+        
+        List<Book> allBooks = bookRepository.findAll();
+        return allBooks.stream()
+            .filter(spec::isSatisfiedBy)
+            .collect(Collectors.toList());
+    }
+    
+    public List<Book> advancedSearch(List<BookSpecification> specifications) {
+        BookSpecification combinedSpec = new AndSpecification(specifications);
+        List<Book> allBooks = bookRepository.findAll();
+        return allBooks.stream()
+            .filter(combinedSpec::isSatisfiedBy)
+            .collect(Collectors.toList());
+    }
+}
+
+
+
+
+7. Decorator Pattern - Adding Features to Books/Members
+
+// Book Decorator Base Class
+public abstract class BookDecorator extends Book {
+    protected Book decoratedBook;
+    
+    public BookDecorator(Book book) {
+        this.decoratedBook = book;
+    }
+    
+    @Override
+    public String getTitle() {
+        return decoratedBook.getTitle();
+    }
+    
+    @Override
+    public String getAuthor() {
+        return decoratedBook.getAuthor();
+    }
+    
+    @Override
+    public BookType getBookType() {
+        return decoratedBook.getBookType();
+    }
+    
+    public abstract String getEnhancedDescription();
+    public abstract List<String> getAdditionalFeatures();
+}
+
+// Concrete Decorators
+public class AudioBookDecorator extends BookDecorator {
+    private int audioDuration; // in minutes
+    private String narrator;
+    
+    public AudioBookDecorator(Book book, int duration, String narrator) {
+        super(book);
+        this.audioDuration = duration;
+        this.narrator = narrator;
+    }
+    
+    @Override
+    public String getEnhancedDescription() {
+        return decoratedBook.getTitle() + " [AUDIO] - Narrated by " + narrator + 
+               " (" + audioDuration + " minutes)";
+    }
+    
+    @Override
+    public List<String> getAdditionalFeatures() {
+        List<String> features = new ArrayList<>();
+        features.add("Audio format");
+        features.add("Duration: " + audioDuration + " minutes");
+        features.add("Narrator: " + narrator);
+        return features;
+    }
+    
+    public int getAudioDuration() {
+        return audioDuration;
+    }
+    
+    public String getNarrator() {
+        return narrator;
+    }
+}
+
+public class IllustratedBookDecorator extends BookDecorator {
+    private int illustrationCount;
+    private String illustrator;
+    
+    public IllustratedBookDecorator(Book book, int illustrationCount, String illustrator) {
+        super(book);
+        this.illustrationCount = illustrationCount;
+        this.illustrator = illustrator;
+    }
+    
+    @Override
+    public String getEnhancedDescription() {
+        return decoratedBook.getTitle() + " [ILLUSTRATED] - " + illustrationCount + 
+               " illustrations by " + illustrator;
+    }
+    
+    @Override
+    public List<String> getAdditionalFeatures() {
+        List<String> features = new ArrayList<>();
+        features.add("Illustrated edition");
+        features.add("Illustration count: " + illustrationCount);
+        features.add("Illustrator: " + illustrator);
+        return features;
+    }
+}
+
+public class LimitedEditionDecorator extends BookDecorator {
+    private int editionNumber;
+    private int totalEditions;
+    private String specialFeatures;
+    
+    public LimitedEditionDecorator(Book book, int editionNumber, int totalEditions, String features) {
+        super(book);
+        this.editionNumber = editionNumber;
+        this.totalEditions = totalEditions;
+        this.specialFeatures = features;
+    }
+    
+    @Override
+    public String getEnhancedDescription() {
+        return decoratedBook.getTitle() + " [LIMITED EDITION " + editionNumber + 
+               "/" + totalEditions + "] - " + specialFeatures;
+    }
+    
+    @Override
+    public List<String> getAdditionalFeatures() {
+        List<String> features = new ArrayList<>();
+        features.add("Limited edition: " + editionNumber + "/" + totalEditions);
+        features.add("Special features: " + specialFeatures);
+        features.add("Collector's item");
+        return features;
+    }
+}
+
+// Member Decorator Base Class
+public abstract class MemberDecorator extends Member {
+    protected Member decoratedMember;
+    
+    public MemberDecorator(Member member) {
+        this.decoratedMember = member;
+    }
+    
+    @Override
+    public String getName() {
+        return decoratedMember.getName();
+    }
+    
+    @Override
+    public String getEmail() {
+        return decoratedMember.getEmail();
+    }
+    
+    @Override
+    public MemberType getMemberType() {
+        return decoratedMember.getMemberType();
+    }
+    
+    public abstract int getEnhancedMaxBooks();
+    public abstract List<String> getAdditionalPrivileges();
+}
+
+// Concrete Member Decorators
+public class PremiumMemberDecorator extends MemberDecorator {
+    private double discountRate;
+    
+    public PremiumMemberDecorator(Member member, double discountRate) {
+        super(member);
+        this.discountRate = discountRate;
+    }
+    
+    @Override
+    public int getEnhancedMaxBooks() {
+        return decoratedMember.getMaxBooksAllowed() + 5; // Extra books for premium
+    }
+    
+    @Override
+    public List<String> getAdditionalPrivileges() {
+        List<String> privileges = new ArrayList<>();
+        privileges.add("Extended borrowing period");
+        privileges.add("Priority reservations");
+        privileges.add("Discount rate: " + (discountRate * 100) + "% on fines");
+        privileges.add("Access to premium collections");
+        return privileges;
+    }
+    
+    public double getDiscountRate() {
+        return discountRate;
+    }
+}
+
+public class ResearcherMemberDecorator extends MemberDecorator {
+    private String researchField;
+    private boolean accessToArchives;
+    
+    public ResearcherMemberDecorator(Member member, String researchField, boolean archiveAccess) {
+        super(member);
+        this.researchField = researchField;
+        this.accessToArchives = archiveAccess;
+    }
+    
+    @Override
+    public int getEnhancedMaxBooks() {
+        return decoratedMember.getMaxBooksAllowed() + 10; // More books for researchers
+    }
+    
+    @Override
+    public List<String> getAdditionalPrivileges() {
+        List<String> privileges = new ArrayList<>();
+        privileges.add("Research field: " + researchField);
+        privileges.add("Extended reference access");
+        if (accessToArchives) {
+            privileges.add("Access to special archives");
+        }
+        privileges.add("Inter-library loan privileges");
+        return privileges;
+    }
+}
+
+// Decorator Service
+@Service
+public class LibraryDecoratorService {
+    
+    public Book enhanceBook(Book book, List<BookEnhancement> enhancements) {
+        Book enhancedBook = book;
+        
+        for (BookEnhancement enhancement : enhancements) {
+            switch (enhancement.getType()) {
+                case "AUDIO":
+                    enhancedBook = new AudioBookDecorator(enhancedBook, 
+                        enhancement.getDuration(), enhancement.getNarrator());
+                    break;
+                case "ILLUSTRATED":
+                    enhancedBook = new IllustratedBookDecorator(enhancedBook,
+                        enhancement.getIllustrationCount(), enhancement.getIllustrator());
+                    break;
+                case "LIMITED_EDITION":
+                    enhancedBook = new LimitedEditionDecorator(enhancedBook,
+                        enhancement.getEditionNumber(), enhancement.getTotalEditions(),
+                        enhancement.getSpecialFeatures());
+                    break;
+            }
+        }
+        
+        return enhancedBook;
+    }
+    
+    public Member enhanceMember(Member member, List<MemberPrivilege> privileges) {
+        Member enhancedMember = member;
+        
+        for (MemberPrivilege privilege : privileges) {
+            switch (privilege.getType()) {
+                case "PREMIUM":
+                    enhancedMember = new PremiumMemberDecorator(enhancedMember, 
+                        privilege.getDiscountRate());
+                    break;
+                case "RESEARCHER":
+                    enhancedMember = new ResearcherMemberDecorator(enhancedMember,
+                        privilege.getResearchField(), privilege.hasArchiveAccess());
+                    break;
+            }
+        }
+        
+        return enhancedMember;
+    }
+}
+
+
+
+8. Chain of Responsibility - Book & Member Validation
+
+// Validation Handler Interface
+public interface LibraryValidationHandler {
+    ValidationResult validate(Object object);
+    void setNextHandler(LibraryValidationHandler nextHandler);
+}
+
+// Abstract Base Handler
+public abstract class AbstractLibraryValidator implements LibraryValidationHandler {
+    protected LibraryValidationHandler nextHandler;
+    
+    @Override
+    public void setNextHandler(LibraryValidationHandler nextHandler) {
+        this.nextHandler = nextHandler;
+    }
+    
+    protected ValidationResult validateNext(Object object) {
+        if (nextHandler == null) {
+            return new ValidationResult(true, "All validations passed");
+        }
+        return nextHandler.validate(object);
+    }
+}
+
+// Book Validation Handlers
+@Component
+public class BookAvailabilityValidator extends AbstractLibraryValidator {
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof Book) {
+            Book book = (Book) object;
+            if (book.getAvailableCopies() <= 0) {
+                return new ValidationResult(false, "Book is not available for borrowing");
+            }
+            if (book.getStatus() != BookStatus.AVAILABLE) {
+                return new ValidationResult(false, "Book is not available: " + book.getStatus());
+            }
+        }
+        return validateNext(object);
+    }
+}
+
+@Component
+public class ReferenceBookValidator extends AbstractLibraryValidator {
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof Book) {
+            Book book = (Book) object;
+            if (book.getBookType() == BookType.REFERENCE) {
+                return new ValidationResult(false, "Reference books cannot be borrowed");
+            }
+        }
+        return validateNext(object);
+    }
+}
+
+// Member Validation Handlers
+@Component
+public class MemberEligibilityValidator extends AbstractLibraryValidator {
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof Member) {
+            Member member = (Member) object;
+            if (member.getCurrentBooksBorrowed() >= member.getMaxBooksAllowed()) {
+                return new ValidationResult(false, 
+                    "Member has reached maximum borrowing limit: " + member.getMaxBooksAllowed());
+            }
+            if (member.getTotalFines() > 0) {
+                return new ValidationResult(false, 
+                    "Member has outstanding fines: $" + member.getTotalFines());
+            }
+            if (member.getMembershipExpiry().isBefore(LocalDate.now())) {
+                return new ValidationResult(false, "Membership has expired");
+            }
+        }
+        return validateNext(object);
+    }
+}
+
+@Component
+public class MemberHistoryValidator extends AbstractLibraryValidator {
+    private final BorrowRecordRepository borrowRecordRepository;
+    
+    @Autowired
+    public MemberHistoryValidator(BorrowRecordRepository borrowRecordRepository) {
+        this.borrowRecordRepository = borrowRecordRepository;
+    }
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof Member) {
+            Member member = (Member) object;
+            List<BorrowRecord> overdueRecords = borrowRecordRepository.findOverdueRecords()
+                .stream()
+                .filter(record -> record.getMemberId().equals(member.getMemberId()))
+                .collect(Collectors.toList());
+            
+            if (!overdueRecords.isEmpty()) {
+                return new ValidationResult(false, 
+                    "Member has " + overdueRecords.size() + " overdue books");
+            }
+        }
+        return validateNext(object);
+    }
+}
+
+// Borrow Validation Handler
+@Component
+public class BorrowLimitValidator extends AbstractLibraryValidator {
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof BorrowRequest) {
+            BorrowRequest request = (BorrowRequest) object;
+            Member member = request.getMember();
+            Book book = request.getBook();
+            
+            if (member.getCurrentBooksBorrowed() + 1 > member.getMaxBooksAllowed()) {
+                return new ValidationResult(false, "Borrowing limit exceeded");
+            }
+            
+            // Check if member already has this book
+            // Implementation would check borrow records
+        }
+        return validateNext(object);
+    }
+}
+
+// Validation Chain Builder
+@Service
+public class LibraryValidationChain {
+    private LibraryValidationHandler bookValidationChain;
+    private LibraryValidationHandler memberValidationChain;
+    private LibraryValidationHandler borrowValidationChain;
+    
+    @Autowired
+    public LibraryValidationChain(BookAvailabilityValidator bookAvailabilityValidator,
+                                ReferenceBookValidator referenceBookValidator,
+                                MemberEligibilityValidator memberEligibilityValidator,
+                                MemberHistoryValidator memberHistoryValidator,
+                                BorrowLimitValidator borrowLimitValidator) {
+        
+        // Build book validation chain
+        this.bookValidationChain = bookAvailabilityValidator;
+        bookAvailabilityValidator.setNextHandler(referenceBookValidator);
+        
+        // Build member validation chain
+        this.memberValidationChain = memberEligibilityValidator;
+        memberEligibilityValidator.setNextHandler(memberHistoryValidator);
+        
+        // Build borrow validation chain
+        this.borrowValidationChain = borrowLimitValidator;
+    }
+    
+    public ValidationResult validateBook(Book book) {
+        return bookValidationChain.validate(book);
+    }
+    
+    public ValidationResult validateMember(Member member) {
+        return memberValidationChain.validate(member);
+    }
+    
+    public ValidationResult validateBorrowRequest(BorrowRequest request) {
+        // Validate both book and member
+        ValidationResult bookValidation = validateBook(request.getBook());
+        if (!bookValidation.isValid()) {
+            return bookValidation;
+        }
+        
+        ValidationResult memberValidation = validateMember(request.getMember());
+        if (!memberValidation.isValid()) {
+            return memberValidation;
+        }
+        
+        return borrowValidationChain.validate(request);
+    }
+}
+
+// Validation Result
+public class ValidationResult {
+    private final boolean isValid;
+    private final String message;
+    
+    public ValidationResult(boolean isValid, String message) {
+        this.isValid = isValid;
+        this.message = message;
+    }
+    
+    // Getters
+    public boolean isValid() { return isValid; }
+    public String getMessage() { return message; }
+}
+
+
+9. Main Library Service Integrating All Patterns
+java
+@Service
+public class LibraryManagementService {
+    private final BookFactory bookFactory;
+    private final MemberFactory memberFactory;
+    private final SearchContext searchContext;
+    private final FineContext fineContext;
+    private final LibraryValidationChain validationChain;
+    private final LibraryDecoratorService decoratorService;
+    private final LibraryNotifier notifier;
+    private final BookRepository bookRepository;
+    private final MemberRepository memberRepository;
+    private final BorrowRecordRepository borrowRecordRepository;
+    
+    @Autowired
+    public LibraryManagementService(BookFactory bookFactory,
+                                  MemberFactory memberFactory,
+                                  SearchContext searchContext,
+                                  FineContext fineContext,
+                                  LibraryValidationChain validationChain,
+                                  LibraryDecoratorService decoratorService,
+                                  LibraryNotifier notifier,
+                                  BookRepository bookRepository,
+                                  MemberRepository memberRepository,
+                                  BorrowRecordRepository borrowRecordRepository) {
+        this.bookFactory = bookFactory;
+        this.memberFactory = memberFactory;
+        this.searchContext = searchContext;
+        this.fineContext = fineContext;
+        this.validationChain = validationChain;
+        this.decoratorService = decoratorService;
+        this.notifier = notifier;
+        this.bookRepository = bookRepository;
+        this.memberRepository = memberRepository;
+        this.borrowRecordRepository = borrowRecordRepository;
+    }
+    
+    public Book addNewBook(AddBookRequest request) {
+        // Create book using Factory Pattern
+        Book book = bookFactory.createBook(
+            request.getBookType(),
+            request.getIsbn(),
+            request.getTitle(),
+            request.getAuthor(),
+            request.getPublisher(),
+            request.getPublicationYear()
+        );
+        
+        // Add enhancements using Decorator Pattern
+        if (request.getEnhancements() != null) {
+            book = decoratorService.enhanceBook(book, request.getEnhancements());
+        }
+        
+        Book savedBook = bookRepository.save(book);
+        notifier.notifyNewBookAdded(savedBook);
+        return savedBook;
+    }
+    
+    public Member registerNewMember(RegisterMemberRequest request) {
+        // Create member using Factory Pattern
+        Member member = memberFactory.createMember(
+            request.getMemberType(),
+            request.getName(),
+            request.getEmail(),
+            request.getPhone()
+        );
+        
+        // Add privileges using Decorator Pattern
+        if (request.getPrivileges() != null) {
+            member = decoratorService.enhanceMember(member, request.getPrivileges());
+        }
+        
+        return memberRepository.save(member);
+    }
+    
+    public BorrowRecord borrowBook(String memberId, String bookIsbn) {
+        Member member = memberRepository.findById(memberId)
+            .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+        Book book = bookRepository.findByIsbn(bookIsbn)
+            .orElseThrow(() -> new IllegalArgumentException("Book not found"));
+        
+        // Validate using Chain of Responsibility
+        BorrowRequest borrowRequest = new BorrowRequest(member, book);
+        ValidationResult validation = validationChain.validateBorrowRequest(borrowRequest);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException(validation.getMessage());
+        }
+        
+        // Create borrow record
+        BorrowRecord record = new BorrowRecord();
+        record.setBorrowId(generateBorrowId());
+        record.setMemberId(memberId);
+        record.setBookBarcode(book.getIsbn()); // Simplified
+        record.setBorrowDate(LocalDate.now());
+        record.setDueDate(calculateDueDate(member, book));
+        record.setReturnDate(null);
+        record.setFineAmount(0.0);
+        record.setReturned(false);
+        
+        BorrowRecord savedRecord = borrowRecordRepository.save(record);
+        
+        // Update member's borrowed count
+        member.setCurrentBooksBorrowed(member.getCurrentBooksBorrowed() + 1);
+        memberRepository.save(member);
+        
+        // Notify observers
+        notifier.notifyBookBorrowed(book, member, record.getDueDate());
+        
+        return savedRecord;
+    }
+    
+    public ReturnResult returnBook(String borrowId) {
+        BorrowRecord record = borrowRecordRepository.findById(borrowId)
+            .orElseThrow(() -> new IllegalArgumentException("Borrow record not found"));
+        
+        record.setReturnDate(LocalDate.now());
+        record.setReturned(true);
+        
+        // Calculate fine using Strategy Pattern
+        double fineAmount = fineContext.calculateFine(
+            getMember(record.getMemberId()),
+            getBook(record.getBookBarcode()),
+            record.getDueDate(),
+            record.getReturnDate()
+        );
+        
+        record.setFineAmount(fineAmount);
+        borrowRecordRepository.save(record);
+        
+        // Update member
+        Member member = getMember(record.getMemberId());
+        member.setCurrentBooksBorrowed(member.getCurrentBooksBorrowed() - 1);
+        if (fineAmount > 0) {
+            member.setTotalFines(member.getTotalFines() + fineAmount);
+            
+            // Create fine record
+            Fine fine = new Fine();
+            fine.setFineId(generateFineId());
+            fine.setMemberId(member.getMemberId());
+            fine.setBorrowId(borrowId);
+            fine.setAmount(fineAmount);
+            fine.setIssuedDate(LocalDate.now());
+            fine.setPaid(false);
+            fine.setReason("Overdue book return");
+            
+            notifier.notifyFineIssued(fine);
+        }
+        memberRepository.save(member);
+        
+        // Notify observers
+        Book book = getBook(record.getBookBarcode());
+        notifier.notifyBookReturned(book, member);
+        
+        return new ReturnResult(record, fineAmount);
+    }
+    
+    public List<Book> searchBooks(SearchRequest request) {
+        // Use Specification Pattern for complex searches
+        BookSearchService searchService = new BookSearchService(bookRepository);
+        return searchService.searchBooks(request.getCriteria());
+    }
+    
+    public List<Book> advancedSearch(String strategy, String query) {
+        // Use Strategy Pattern for different search types
+        List<Book> catalog = bookRepository.findAll();
+        return searchContext.search(strategy, query, catalog);
+    }
+    
+    private LocalDate calculateDueDate(Member member, Book book) {
+        int loanPeriod = getLoanPeriod(member, book);
+        return LocalDate.now().plusDays(loanPeriod);
+    }
+    
+    private int getLoanPeriod(Member member, Book book) {
+        switch (member.getMemberType()) {
+            case FACULTY: return 30; // 30 days for faculty
+            case STAFF: return 21;   // 21 days for staff
+            case STUDENT: return 14; // 14 days for students
+            case GUEST: return 7;    // 7 days for guests
+            default: return 14;
+        }
+    }
+    
+    private String generateBorrowId() {
+        return "BRW_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    private String generateFineId() {
+        return "FINE_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    private Member getMember(String memberId) {
+        return memberRepository.findById(memberId)
+            .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+    }
+    
+    private Book getBook(String isbn) {
+        return bookRepository.findByIsbn(isbn)
+            .orElseThrow(() -> new IllegalArgumentException("Book not found"));
+    }
+}

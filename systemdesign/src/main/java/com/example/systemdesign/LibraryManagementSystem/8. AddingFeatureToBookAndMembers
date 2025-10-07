@@ -1,0 +1,249 @@
+7. Decorator Pattern - Adding Features to Books/Members
+
+// Book Decorator Base Class
+public abstract class BookDecorator extends Book {
+    protected Book decoratedBook;
+    
+    public BookDecorator(Book book) {
+        this.decoratedBook = book;
+    }
+    
+    @Override
+    public String getTitle() {
+        return decoratedBook.getTitle();
+    }
+    
+    @Override
+    public String getAuthor() {
+        return decoratedBook.getAuthor();
+    }
+    
+    @Override
+    public BookType getBookType() {
+        return decoratedBook.getBookType();
+    }
+    
+    public abstract String getEnhancedDescription();
+    public abstract List<String> getAdditionalFeatures();
+}
+
+// Concrete Decorators
+public class AudioBookDecorator extends BookDecorator {
+    private int audioDuration; // in minutes
+    private String narrator;
+    
+    public AudioBookDecorator(Book book, int duration, String narrator) {
+        super(book);
+        this.audioDuration = duration;
+        this.narrator = narrator;
+    }
+    
+    @Override
+    public String getEnhancedDescription() {
+        return decoratedBook.getTitle() + " [AUDIO] - Narrated by " + narrator + 
+               " (" + audioDuration + " minutes)";
+    }
+    
+    @Override
+    public List<String> getAdditionalFeatures() {
+        List<String> features = new ArrayList<>();
+        features.add("Audio format");
+        features.add("Duration: " + audioDuration + " minutes");
+        features.add("Narrator: " + narrator);
+        return features;
+    }
+    
+    public int getAudioDuration() {
+        return audioDuration;
+    }
+    
+    public String getNarrator() {
+        return narrator;
+    }
+}
+
+public class IllustratedBookDecorator extends BookDecorator {
+    private int illustrationCount;
+    private String illustrator;
+    
+    public IllustratedBookDecorator(Book book, int illustrationCount, String illustrator) {
+        super(book);
+        this.illustrationCount = illustrationCount;
+        this.illustrator = illustrator;
+    }
+    
+    @Override
+    public String getEnhancedDescription() {
+        return decoratedBook.getTitle() + " [ILLUSTRATED] - " + illustrationCount + 
+               " illustrations by " + illustrator;
+    }
+    
+    @Override
+    public List<String> getAdditionalFeatures() {
+        List<String> features = new ArrayList<>();
+        features.add("Illustrated edition");
+        features.add("Illustration count: " + illustrationCount);
+        features.add("Illustrator: " + illustrator);
+        return features;
+    }
+}
+
+public class LimitedEditionDecorator extends BookDecorator {
+    private int editionNumber;
+    private int totalEditions;
+    private String specialFeatures;
+    
+    public LimitedEditionDecorator(Book book, int editionNumber, int totalEditions, String features) {
+        super(book);
+        this.editionNumber = editionNumber;
+        this.totalEditions = totalEditions;
+        this.specialFeatures = features;
+    }
+    
+    @Override
+    public String getEnhancedDescription() {
+        return decoratedBook.getTitle() + " [LIMITED EDITION " + editionNumber + 
+               "/" + totalEditions + "] - " + specialFeatures;
+    }
+    
+    @Override
+    public List<String> getAdditionalFeatures() {
+        List<String> features = new ArrayList<>();
+        features.add("Limited edition: " + editionNumber + "/" + totalEditions);
+        features.add("Special features: " + specialFeatures);
+        features.add("Collector's item");
+        return features;
+    }
+}
+
+// Member Decorator Base Class
+public abstract class MemberDecorator extends Member {
+    protected Member decoratedMember;
+    
+    public MemberDecorator(Member member) {
+        this.decoratedMember = member;
+    }
+    
+    @Override
+    public String getName() {
+        return decoratedMember.getName();
+    }
+    
+    @Override
+    public String getEmail() {
+        return decoratedMember.getEmail();
+    }
+    
+    @Override
+    public MemberType getMemberType() {
+        return decoratedMember.getMemberType();
+    }
+    
+    public abstract int getEnhancedMaxBooks();
+    public abstract List<String> getAdditionalPrivileges();
+}
+
+// Concrete Member Decorators
+public class PremiumMemberDecorator extends MemberDecorator {
+    private double discountRate;
+    
+    public PremiumMemberDecorator(Member member, double discountRate) {
+        super(member);
+        this.discountRate = discountRate;
+    }
+    
+    @Override
+    public int getEnhancedMaxBooks() {
+        return decoratedMember.getMaxBooksAllowed() + 5; // Extra books for premium
+    }
+    
+    @Override
+    public List<String> getAdditionalPrivileges() {
+        List<String> privileges = new ArrayList<>();
+        privileges.add("Extended borrowing period");
+        privileges.add("Priority reservations");
+        privileges.add("Discount rate: " + (discountRate * 100) + "% on fines");
+        privileges.add("Access to premium collections");
+        return privileges;
+    }
+    
+    public double getDiscountRate() {
+        return discountRate;
+    }
+}
+
+public class ResearcherMemberDecorator extends MemberDecorator {
+    private String researchField;
+    private boolean accessToArchives;
+    
+    public ResearcherMemberDecorator(Member member, String researchField, boolean archiveAccess) {
+        super(member);
+        this.researchField = researchField;
+        this.accessToArchives = archiveAccess;
+    }
+    
+    @Override
+    public int getEnhancedMaxBooks() {
+        return decoratedMember.getMaxBooksAllowed() + 10; // More books for researchers
+    }
+    
+    @Override
+    public List<String> getAdditionalPrivileges() {
+        List<String> privileges = new ArrayList<>();
+        privileges.add("Research field: " + researchField);
+        privileges.add("Extended reference access");
+        if (accessToArchives) {
+            privileges.add("Access to special archives");
+        }
+        privileges.add("Inter-library loan privileges");
+        return privileges;
+    }
+}
+
+// Decorator Service
+@Service
+public class LibraryDecoratorService {
+    
+    public Book enhanceBook(Book book, List<BookEnhancement> enhancements) {
+        Book enhancedBook = book;
+        
+        for (BookEnhancement enhancement : enhancements) {
+            switch (enhancement.getType()) {
+                case "AUDIO":
+                    enhancedBook = new AudioBookDecorator(enhancedBook, 
+                        enhancement.getDuration(), enhancement.getNarrator());
+                    break;
+                case "ILLUSTRATED":
+                    enhancedBook = new IllustratedBookDecorator(enhancedBook,
+                        enhancement.getIllustrationCount(), enhancement.getIllustrator());
+                    break;
+                case "LIMITED_EDITION":
+                    enhancedBook = new LimitedEditionDecorator(enhancedBook,
+                        enhancement.getEditionNumber(), enhancement.getTotalEditions(),
+                        enhancement.getSpecialFeatures());
+                    break;
+            }
+        }
+        
+        return enhancedBook;
+    }
+    
+    public Member enhanceMember(Member member, List<MemberPrivilege> privileges) {
+        Member enhancedMember = member;
+        
+        for (MemberPrivilege privilege : privileges) {
+            switch (privilege.getType()) {
+                case "PREMIUM":
+                    enhancedMember = new PremiumMemberDecorator(enhancedMember, 
+                        privilege.getDiscountRate());
+                    break;
+                case "RESEARCHER":
+                    enhancedMember = new ResearcherMemberDecorator(enhancedMember,
+                        privilege.getResearchField(), privilege.hasArchiveAccess());
+                    break;
+            }
+        }
+        
+        return enhancedMember;
+    }
+}

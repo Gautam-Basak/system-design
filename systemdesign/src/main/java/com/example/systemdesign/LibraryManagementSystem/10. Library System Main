@@ -1,0 +1,204 @@
+9. Main Library Service Integrating All Patterns
+
+
+java
+@Service
+public class LibraryManagementService {
+    private final BookFactory bookFactory;
+    private final MemberFactory memberFactory;
+    private final SearchContext searchContext;
+    private final FineContext fineContext;
+    private final LibraryValidationChain validationChain;
+    private final LibraryDecoratorService decoratorService;
+    private final LibraryNotifier notifier;
+    private final BookRepository bookRepository;
+    private final MemberRepository memberRepository;
+    private final BorrowRecordRepository borrowRecordRepository;
+    
+    @Autowired
+    public LibraryManagementService(BookFactory bookFactory,
+                                  MemberFactory memberFactory,
+                                  SearchContext searchContext,
+                                  FineContext fineContext,
+                                  LibraryValidationChain validationChain,
+                                  LibraryDecoratorService decoratorService,
+                                  LibraryNotifier notifier,
+                                  BookRepository bookRepository,
+                                  MemberRepository memberRepository,
+                                  BorrowRecordRepository borrowRecordRepository) {
+        this.bookFactory = bookFactory;
+        this.memberFactory = memberFactory;
+        this.searchContext = searchContext;
+        this.fineContext = fineContext;
+        this.validationChain = validationChain;
+        this.decoratorService = decoratorService;
+        this.notifier = notifier;
+        this.bookRepository = bookRepository;
+        this.memberRepository = memberRepository;
+        this.borrowRecordRepository = borrowRecordRepository;
+    }
+    
+    public Book addNewBook(AddBookRequest request) {
+        // Create book using Factory Pattern
+        Book book = bookFactory.createBook(
+            request.getBookType(),
+            request.getIsbn(),
+            request.getTitle(),
+            request.getAuthor(),
+            request.getPublisher(),
+            request.getPublicationYear()
+        );
+        
+        // Add enhancements using Decorator Pattern
+        if (request.getEnhancements() != null) {
+            book = decoratorService.enhanceBook(book, request.getEnhancements());
+        }
+        
+        Book savedBook = bookRepository.save(book);
+        notifier.notifyNewBookAdded(savedBook);
+        return savedBook;
+    }
+    
+    public Member registerNewMember(RegisterMemberRequest request) {
+        // Create member using Factory Pattern
+        Member member = memberFactory.createMember(
+            request.getMemberType(),
+            request.getName(),
+            request.getEmail(),
+            request.getPhone()
+        );
+        
+        // Add privileges using Decorator Pattern
+        if (request.getPrivileges() != null) {
+            member = decoratorService.enhanceMember(member, request.getPrivileges());
+        }
+        
+        return memberRepository.save(member);
+    }
+    
+    public BorrowRecord borrowBook(String memberId, String bookIsbn) {
+        Member member = memberRepository.findById(memberId)
+            .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+        Book book = bookRepository.findByIsbn(bookIsbn)
+            .orElseThrow(() -> new IllegalArgumentException("Book not found"));
+        
+        // Validate using Chain of Responsibility
+        BorrowRequest borrowRequest = new BorrowRequest(member, book);
+        ValidationResult validation = validationChain.validateBorrowRequest(borrowRequest);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException(validation.getMessage());
+        }
+        
+        // Create borrow record
+        BorrowRecord record = new BorrowRecord();
+        record.setBorrowId(generateBorrowId());
+        record.setMemberId(memberId);
+        record.setBookBarcode(book.getIsbn()); // Simplified
+        record.setBorrowDate(LocalDate.now());
+        record.setDueDate(calculateDueDate(member, book));
+        record.setReturnDate(null);
+        record.setFineAmount(0.0);
+        record.setReturned(false);
+        
+        BorrowRecord savedRecord = borrowRecordRepository.save(record);
+        
+        // Update member's borrowed count
+        member.setCurrentBooksBorrowed(member.getCurrentBooksBorrowed() + 1);
+        memberRepository.save(member);
+        
+        // Notify observers
+        notifier.notifyBookBorrowed(book, member, record.getDueDate());
+        
+        return savedRecord;
+    }
+    
+    public ReturnResult returnBook(String borrowId) {
+        BorrowRecord record = borrowRecordRepository.findById(borrowId)
+            .orElseThrow(() -> new IllegalArgumentException("Borrow record not found"));
+        
+        record.setReturnDate(LocalDate.now());
+        record.setReturned(true);
+        
+        // Calculate fine using Strategy Pattern
+        double fineAmount = fineContext.calculateFine(
+            getMember(record.getMemberId()),
+            getBook(record.getBookBarcode()),
+            record.getDueDate(),
+            record.getReturnDate()
+        );
+        
+        record.setFineAmount(fineAmount);
+        borrowRecordRepository.save(record);
+        
+        // Update member
+        Member member = getMember(record.getMemberId());
+        member.setCurrentBooksBorrowed(member.getCurrentBooksBorrowed() - 1);
+        if (fineAmount > 0) {
+            member.setTotalFines(member.getTotalFines() + fineAmount);
+            
+            // Create fine record
+            Fine fine = new Fine();
+            fine.setFineId(generateFineId());
+            fine.setMemberId(member.getMemberId());
+            fine.setBorrowId(borrowId);
+            fine.setAmount(fineAmount);
+            fine.setIssuedDate(LocalDate.now());
+            fine.setPaid(false);
+            fine.setReason("Overdue book return");
+            
+            notifier.notifyFineIssued(fine);
+        }
+        memberRepository.save(member);
+        
+        // Notify observers
+        Book book = getBook(record.getBookBarcode());
+        notifier.notifyBookReturned(book, member);
+        
+        return new ReturnResult(record, fineAmount);
+    }
+    
+    public List<Book> searchBooks(SearchRequest request) {
+        // Use Specification Pattern for complex searches
+        BookSearchService searchService = new BookSearchService(bookRepository);
+        return searchService.searchBooks(request.getCriteria());
+    }
+    
+    public List<Book> advancedSearch(String strategy, String query) {
+        // Use Strategy Pattern for different search types
+        List<Book> catalog = bookRepository.findAll();
+        return searchContext.search(strategy, query, catalog);
+    }
+    
+    private LocalDate calculateDueDate(Member member, Book book) {
+        int loanPeriod = getLoanPeriod(member, book);
+        return LocalDate.now().plusDays(loanPeriod);
+    }
+    
+    private int getLoanPeriod(Member member, Book book) {
+        switch (member.getMemberType()) {
+            case FACULTY: return 30; // 30 days for faculty
+            case STAFF: return 21;   // 21 days for staff
+            case STUDENT: return 14; // 14 days for students
+            case GUEST: return 7;    // 7 days for guests
+            default: return 14;
+        }
+    }
+    
+    private String generateBorrowId() {
+        return "BRW_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    private String generateFineId() {
+        return "FINE_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    private Member getMember(String memberId) {
+        return memberRepository.findById(memberId)
+            .orElseThrow(() -> new IllegalArgumentException("Member not found"));
+    }
+    
+    private Book getBook(String isbn) {
+        return bookRepository.findByIsbn(isbn)
+            .orElseThrow(() -> new IllegalArgumentException("Book not found"));
+    }
+}

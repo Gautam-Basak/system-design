@@ -1,0 +1,38 @@
+2. Repository Interfaces (Repository Pattern)
+java
+
+// Repository Interfaces
+public interface StudentRepository {
+    Optional<Student> findById(String studentId);
+    Optional<Student> findByEmail(String email);
+    Student save(Student student);
+    List<Student> findAll();
+}
+
+public interface CounsellorRepository {
+    Optional<Counsellor> findById(String counsellorId);
+    List<Counsellor> findAll();
+    List<Counsellor> findBySpecialization(String specialization);
+    Counsellor save(Counsellor counsellor);
+}
+
+public interface AppointmentRepository {
+    Optional<Appointment> findById(String appointmentId);
+    List<Appointment> findByStudentId(String studentId);
+    List<Appointment> findByCounsellorId(String counsellorId);
+    List<Appointment> findByCounsellorAndDate(String counsellorId, LocalDate date);
+    Appointment save(Appointment appointment);
+    boolean delete(String appointmentId);
+}
+
+public interface SessionNoteRepository {
+    Optional<SessionNote> findByAppointmentId(String appointmentId);
+    List<SessionNote> findByCounsellorId(String counsellorId);
+    SessionNote save(SessionNote sessionNote);
+}
+
+public interface TimeSlotRepository {
+    List<TimeSlot> findAvailableSlotsByCounsellor(String counsellorId, LocalDate date);
+    TimeSlot save(TimeSlot timeSlot);
+    void markSlotUnavailable(String counsellorId, LocalDateTime startTime);
+}

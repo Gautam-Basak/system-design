@@ -1,0 +1,76 @@
+1. Constants and Enums
+java
+
+
+// Enums
+public enum VehicleType {
+    CAR, TRUCK, ELECTRIC, VAN, MOTORBIKE
+}
+
+public enum ParkingSpotType {
+    HANDICAPPED, COMPACT, LARGE, MOTORBIKE, ELECTRIC
+}
+
+public enum AccountStatus {
+    ACTIVE, BLOCKED, BANNED, COMPROMISED, ARCHIVED, UNKNOWN
+}
+
+public enum ParkingTicketStatus {
+    ACTIVE, PAID, LOST
+}
+
+2. Entity Classes
+java
+// Address.java
+public class Address {
+    private String streetAddress;
+    private String city;
+    private String state;
+    private String zipCode;
+    private String country;
+    
+    public Address(String streetAddress, String city, String state, String zipCode, String country) {
+        this.streetAddress = streetAddress;
+        this.city = city;
+        this.state = state;
+        this.zipCode = zipCode;
+        this.country = country;
+    }
+    
+    // Getters and setters
+    public String getStreetAddress() { return streetAddress; }
+    public void setStreetAddress(String streetAddress) { this.streetAddress = streetAddress; }
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+    public String getState() { return state; }
+    public void setState(String state) { this.state = state; }
+    public String getZipCode() { return zipCode; }
+    public void setZipCode(String zipCode) { this.zipCode = zipCode; }
+    public String getCountry() { return country; }
+    public void setCountry(String country) { this.country = country; }
+}
+
+// Person.java
+public class Person {
+    private String name;
+    private Address address;
+    private String email;
+    private String phone;
+    
+    public Person(String name, Address address, String email, String phone) {
+        this.name = name;
+        this.address = address;
+        this.email = email;
+        this.phone = phone;
+    }
+    
+    // Getters and setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public Address getAddress() { return address; }
+    public void setAddress(Address address) { this.address = address; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+}

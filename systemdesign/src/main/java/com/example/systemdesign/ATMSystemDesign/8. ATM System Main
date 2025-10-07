@@ -1,0 +1,82 @@
+public class ATMSystem {
+    public static void main(String[] args) {
+        // Create bank
+        Bank bank = new Bank("National Bank", "NB123");
+        
+        // Create ATM
+        ATM atm = new ATM("ATM001", "123 Downtown Street", bank);
+        bank.addATM(atm);
+        
+        // Display welcome message
+        atm.getScreen().showMessage("Welcome to " + bank.getBankCode() + " ATM");
+        
+        // Simulate user authentication
+        String cardNumber = "1234567890123456";
+        int pin = 1234;
+        
+        Customer customer = atm.authenticateUser(cardNumber, pin);
+        
+        if (customer != null) {
+            // Display main menu
+            Scanner scanner = new Scanner(System.in);
+            boolean sessionActive = true;
+            
+            while (sessionActive) {
+                atm.getScreen().showMenu();
+                int choice = scanner.nextInt();
+                
+                switch (choice) {
+                    case 1: // Balance Inquiry
+                        BalanceInquiry balanceInquiry = new BalanceInquiry(customer.getAccount());
+                        atm.makeTransaction(customer, balanceInquiry);
+                        break;
+                        
+                    case 2: // Withdraw
+                        System.out.print("Enter amount to withdraw: $");
+                        double withdrawAmount = scanner.nextDouble();
+                        Withdraw withdraw = new Withdraw(customer.getAccount(), withdrawAmount, atm.getCashDispenser());
+                        atm.makeTransaction(customer, withdraw);
+                        break;
+                        
+                    case 3: // Deposit Cash
+                        System.out.print("Enter cash amount to deposit: $");
+                        double cashAmount = scanner.nextDouble();
+                        CashDeposit cashDeposit = new CashDeposit(customer.getAccount(), cashAmount);
+                        atm.makeTransaction(customer, cashDeposit);
+                        break;
+                        
+                    case 4: // Deposit Check
+                        System.out.print("Enter check amount: $");
+                        double checkAmount = scanner.nextDouble();
+                        scanner.nextLine(); // consume newline
+                        System.out.print("Enter check number: ");
+                        String checkNumber = scanner.nextLine();
+                        CheckDeposit checkDeposit = new CheckDeposit(customer.getAccount(), checkAmount, checkNumber, bank.getBankCode());
+                        atm.makeTransaction(customer, checkDeposit);
+                        break;
+                        
+                    case 5: // Transfer
+                        System.out.print("Enter destination account number: ");
+                        String destAccount = scanner.next();
+                        System.out.print("Enter transfer amount: $");
+                        double transferAmount = scanner.nextDouble();
+                        Transfer transfer = new Transfer(customer.getAccount(), destAccount, transferAmount);
+                        atm.makeTransaction(customer, transfer);
+                        break;
+                        
+                    case 6: // Exit
+                        sessionActive = false;
+                        atm.getScreen().showMessage("Thank you for using our ATM. Goodbye!");
+                        break;
+                        
+                    default:
+                        atm.getScreen().showMessage("Invalid option. Please try again.");
+                }
+            }
+        } else {
+            atm.getScreen().showMessage("Authentication failed. Please try again.");
+        }
+        
+        System.out.println("ATM system demonstration completed!");
+    }
+}

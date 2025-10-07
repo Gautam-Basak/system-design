@@ -1,0 +1,71 @@
+6. Display Board (Observer Pattern)
+java
+
+
+// ParkingDisplayBoard.java
+public class ParkingDisplayBoard {
+    private String id;
+    private ParkingSpot handicappedFreeSpot;
+    private ParkingSpot compactFreeSpot;
+    private ParkingSpot largeFreeSpot;
+    private ParkingSpot motorbikeFreeSpot;
+    private ParkingSpot electricFreeSpot;
+    
+    public ParkingDisplayBoard(String id) {
+        this.id = id;
+    }
+    
+    public void showEmptySpotNumber() {
+        StringBuilder message = new StringBuilder();
+        
+        if (handicappedFreeSpot != null && handicappedFreeSpot.isFree()) {
+            message.append("Free Handicapped: ").append(handicappedFreeSpot.getNumber());
+        } else {
+            message.append("Handicapped is full");
+        }
+        message.append("\n");
+        
+        if (compactFreeSpot != null && compactFreeSpot.isFree()) {
+            message.append("Free Compact: ").append(compactFreeSpot.getNumber());
+        } else {
+            message.append("Compact is full");
+        }
+        message.append("\n");
+        
+        if (largeFreeSpot != null && largeFreeSpot.isFree()) {
+            message.append("Free Large: ").append(largeFreeSpot.getNumber());
+        } else {
+            message.append("Large is full");
+        }
+        message.append("\n");
+        
+        if (motorbikeFreeSpot != null && motorbikeFreeSpot.isFree()) {
+            message.append("Free Motorbike: ").append(motorbikeFreeSpot.getNumber());
+        } else {
+            message.append("Motorbike is full");
+        }
+        message.append("\n");
+        
+        if (electricFreeSpot != null && electricFreeSpot.isFree()) {
+            message.append("Free Electric: ").append(electricFreeSpot.getNumber());
+        } else {
+            message.append("Electric is full");
+        }
+        
+        System.out.println(message.toString());
+    }
+    
+    // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public ParkingSpot getHandicappedFreeSpot() { return handicappedFreeSpot; }
+    public void setHandicappedFreeSpot(ParkingSpot handicappedFreeSpot) { this.handicappedFreeSpot = handicappedFreeSpot; }
+    public ParkingSpot getCompactFreeSpot() { return compactFreeSpot; }
+    public void setCompactFreeSpot(ParkingSpot compactFreeSpot) { this.compactFreeSpot = compactFreeSpot; }
+    public ParkingSpot getLargeFreeSpot() { return largeFreeSpot; }
+    public void setLargeFreeSpot(ParkingSpot largeFreeSpot) { this.largeFreeSpot = largeFreeSpot; }
+    public ParkingSpot getMotorbikeFreeSpot() { return motorbikeFreeSpot; }
+    public void setMotorbikeFreeSpot(ParkingSpot motorbikeFreeSpot) { this.motorbikeFreeSpot = motorbikeFreeSpot; }
+    public ParkingSpot getElectricFreeSpot() { return electricFreeSpot; }
+    public void setElectricFreeSpot(ParkingSpot electricFreeSpot) { this.electricFreeSpot = electricFreeSpot; }
+}

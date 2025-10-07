@@ -1,0 +1,103 @@
+1. Domain Models
+java
+
+
+// Enums
+public enum AppointmentStatus {
+    SCHEDULED, IN_PROGRESS, COMPLETED, CANCELLED, NO_SHOW
+}
+
+public enum NotificationType {
+    EMAIL, SMS, PUSH
+}
+
+// Domain Entities
+public class Student {
+    private String studentId;
+    private String name;
+    private String email;
+    private String phoneNumber;
+    private String faculty;
+    private int yearOfStudy;
+    
+    // Constructors, getters, setters
+    public Student(String studentId, String name, String email, 
+                   String phoneNumber, String faculty, int yearOfStudy) {
+        this.studentId = studentId;
+        this.name = name;
+        this.email = email;
+        this.phoneNumber = phoneNumber;
+        this.faculty = faculty;
+        this.yearOfStudy = yearOfStudy;
+    }
+    
+    // Getters and setters...
+    public String getStudentId() { return studentId; }
+    public String getEmail() { return email; }
+    public String getPhoneNumber() { return phoneNumber; }
+}
+
+public class Counsellor {
+    private String counsellorId;
+    private String name;
+    private String email;
+    private List<String> specializations;
+    private String bio;
+    
+    public Counsellor(String counsellorId, String name, String email, 
+                      List<String> specializations, String bio) {
+        this.counsellorId = counsellorId;
+        this.name = name;
+        this.email = email;
+        this.specializations = specializations;
+        this.bio = bio;
+    }
+    
+    // Getters and setters...
+}
+
+public class Appointment {
+    private String appointmentId;
+    private String studentId;
+    private String counsellorId;
+    private LocalDateTime dateTime;
+    private AppointmentStatus status;
+    private int durationMinutes;
+    private String concernCategory;
+    
+    public Appointment(String appointmentId, String studentId, String counsellorId,
+                      LocalDateTime dateTime, AppointmentStatus status, 
+                      int durationMinutes, String concernCategory) {
+        this.appointmentId = appointmentId;
+        this.studentId = studentId;
+        this.counsellorId = counsellorId;
+        this.dateTime = dateTime;
+        this.status = status;
+        this.durationMinutes = durationMinutes;
+        this.concernCategory = concernCategory;
+    }
+    
+    // Getters and setters...
+    public void setStatus(AppointmentStatus status) {
+        this.status = status;
+    }
+}
+
+public class SessionNote {
+    private String noteId;
+    private String appointmentId;
+    private String counsellorId;
+    private String content;
+    private LocalDateTime dateCreated;
+    
+    // Constructor, getters, setters...
+}
+
+public class TimeSlot {
+    private String counsellorId;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private boolean isAvailable;
+    
+    // Constructor, getters, setters...
+}

@@ -1,0 +1,223 @@
+abstract class Transaction {
+    protected String transactionId;
+    protected LocalDateTime creationTime;
+    protected TransactionStatus status;
+    protected Account account;
+    
+    public Transaction(Account account) {
+        this.transactionId = generateTransactionId();
+        this.creationTime = LocalDateTime.now();
+        this.status = TransactionStatus.NONE;
+        this.account = account;
+    }
+    
+    public abstract TransactionStatus processTransaction();
+    public abstract TransactionType getTransactionType();
+    
+    protected String generateTransactionId() {
+        return "TXN_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+    
+    // Getters
+    public String getTransactionId() { return transactionId; }
+    public LocalDateTime getCreationTime() { return creationTime; }
+    public TransactionStatus getStatus() { return status; }
+    public Account getAccount() { return account; }
+}
+
+class BalanceInquiry extends Transaction {
+    public BalanceInquiry(Account account) {
+        super(account);
+    }
+    
+    @Override
+    public TransactionStatus processTransaction() {
+        System.out.println("Processing balance inquiry for account: " + account.getAccountNumber());
+        System.out.println("Available Balance: $" + account.getAvailableBalance());
+        System.out.println("Total Balance: $" + account.getTotalBalance());
+        this.status = TransactionStatus.SUCCESS;
+        return this.status;
+    }
+    
+    @Override
+    public TransactionType getTransactionType() {
+        return TransactionType.BALANCE_INQUIRY;
+    }
+}
+
+abstract class Deposit extends Transaction {
+    protected double amount;
+    
+    public Deposit(Account account, double amount) {
+        super(account);
+        this.amount = amount;
+    }
+    
+    public double getAmount() {
+        return amount;
+    }
+}
+
+class CheckDeposit extends Deposit {
+    private String checkNumber;
+    private String bankCode;
+    
+    public CheckDeposit(Account account, double amount, String checkNumber, String bankCode) {
+        super(account, amount);
+        this.checkNumber = checkNumber;
+        this.bankCode = bankCode;
+    }
+    
+    @Override
+    public TransactionStatus processTransaction() {
+        System.out.println("Processing check deposit: $" + amount);
+        System.out.println("Check Number: " + checkNumber + ", Bank Code: " + bankCode);
+        
+        if (account.deposit(amount)) {
+            this.status = TransactionStatus.SUCCESS;
+            System.out.println("Check deposit successful");
+        } else {
+            this.status = TransactionStatus.FAILURE;
+            System.out.println("Check deposit failed");
+        }
+        
+        return this.status;
+    }
+    
+    @Override
+    public TransactionType getTransactionType() {
+        return TransactionType.DEPOSIT_CHECK;
+    }
+    
+    public String getCheckNumber() {
+        return checkNumber;
+    }
+}
+
+class CashDeposit extends Deposit {
+    private static final double CASH_DEPOSIT_LIMIT = 10000.0;
+    
+    public CashDeposit(Account account, double amount) {
+        super(account, amount);
+    }
+    
+    @Override
+    public TransactionStatus processTransaction() {
+        System.out.println("Processing cash deposit: $" + amount);
+        
+        if (amount > CASH_DEPOSIT_LIMIT) {
+            System.out.println("Cash deposit exceeds limit of $" + CASH_DEPOSIT_LIMIT);
+            this.status = TransactionStatus.FAILURE;
+            return this.status;
+        }
+        
+        if (account.deposit(amount)) {
+            this.status = TransactionStatus.SUCCESS;
+            System.out.println("Cash deposit successful");
+        } else {
+            this.status = TransactionStatus.FAILURE;
+            System.out.println("Cash deposit failed");
+        }
+        
+        return this.status;
+    }
+    
+    @Override
+    public TransactionType getTransactionType() {
+        return TransactionType.DEPOSIT_CASH;
+    }
+    
+    public double getCashDepositLimit() {
+        return CASH_DEPOSIT_LIMIT;
+    }
+}
+
+class Withdraw extends Transaction {
+    private double amount;
+    private CashDispenser cashDispenser;
+    
+    public Withdraw(Account account, double amount, CashDispenser cashDispenser) {
+        super(account);
+        this.amount = amount;
+        this.cashDispenser = cashDispenser;
+    }
+    
+    @Override
+    public TransactionStatus processTransaction() {
+        System.out.println("Processing withdrawal: $" + amount);
+        
+        if (!cashDispenser.canDispenseCash(amount)) {
+            System.out.println("ATM cannot dispense requested amount");
+            this.status = TransactionStatus.FAILURE;
+            return this.status;
+        }
+        
+        if (account.withdraw(amount)) {
+            if (cashDispenser.dispenseCash(amount)) {
+                this.status = TransactionStatus.SUCCESS;
+                System.out.println("Withdrawal successful");
+            } else {
+                // Reverse the account withdrawal if cash dispense fails
+                account.deposit(amount);
+                this.status = TransactionStatus.FAILURE;
+                System.out.println("Cash dispense failed");
+            }
+        } else {
+            this.status = TransactionStatus.FAILURE;
+            System.out.println("Insufficient funds or withdrawal limit exceeded");
+        }
+        
+        return this.status;
+    }
+    
+    @Override
+    public TransactionType getTransactionType() {
+        return TransactionType.WITHDRAW;
+    }
+    
+    public double getAmount() {
+        return amount;
+    }
+}
+
+class Transfer extends Transaction {
+    private String destinationAccountNumber;
+    private double amount;
+    
+    public Transfer(Account sourceAccount, String destinationAccountNumber, double amount) {
+        super(sourceAccount);
+        this.destinationAccountNumber = destinationAccountNumber;
+        this.amount = amount;
+    }
+    
+    @Override
+    public TransactionStatus processTransaction() {
+        System.out.println("Processing transfer: $" + amount + " to account: " + destinationAccountNumber);
+        
+        // In real system, this would transfer between actual accounts
+        // For demonstration, we'll simulate the transfer
+        
+        if (account.withdraw(amount)) {
+            System.out.println("Transfer completed successfully");
+            this.status = TransactionStatus.SUCCESS;
+        } else {
+            System.out.println("Transfer failed - insufficient funds");
+            this.status = TransactionStatus.FAILURE;
+        }
+        
+        return this.status;
+    }
+    
+    @Override
+    public TransactionType getTransactionType() {
+        return TransactionType.TRANSFER;
+    }
+    
+    public String getDestinationAccountNumber() {
+        return destinationAccountNumber;
+    }
+    
+    public double getAmount() {
+        return amount;
+    }
+}

@@ -1,0 +1,42 @@
+// Search Interface
+interface Search {
+    List<Product> searchProductsByName(String name);
+    List<Product> searchProductsByCategory(String category);
+}
+
+// Catalog Class
+class Catalog implements Search {
+    private Map<String, List<Product>> productNames;
+    private Map<String, List<Product>> productCategories;
+    private List<Product> allProducts;
+    
+    public Catalog() {
+        this.productNames = new HashMap<>();
+        this.productCategories = new HashMap<>();
+        this.allProducts = new ArrayList<>();
+    }
+    
+    public void addProduct(Product product) {
+        allProducts.add(product);
+        
+        // Index by name
+        productNames.computeIfAbsent(product.getName().toLowerCase(), k -> new ArrayList<>()).add(product);
+        
+        // Index by category
+        productCategories.computeIfAbsent(product.getCategory().getName().toLowerCase(), k -> new ArrayList<>()).add(product);
+    }
+    
+    @Override
+    public List<Product> searchProductsByName(String name) {
+        return productNames.getOrDefault(name.toLowerCase(), new ArrayList<>());
+    }
+    
+    @Override
+    public List<Product> searchProductsByCategory(String category) {
+        return productCategories.getOrDefault(category.toLowerCase(), new ArrayList<>());
+    }
+    
+    public List<Product> getAllProducts() {
+        return new ArrayList<>(allProducts);
+    }
+}

@@ -1,0 +1,105 @@
+class Movie {
+    private String title;
+    private String description;
+    private int durationInMins;
+    private String language;
+    private LocalDate releaseDate;
+    private String country;
+    private String genre;
+    private String movieAddedBy;
+    private List<Show> shows;
+    
+    public Movie(String title, String description, int durationInMins, String language,
+                LocalDate releaseDate, String country, String genre, String movieAddedBy) {
+        this.title = title;
+        this.description = description;
+        this.durationInMins = durationInMins;
+        this.language = language;
+        this.releaseDate = releaseDate;
+        this.country = country;
+        this.genre = genre;
+        this.movieAddedBy = movieAddedBy;
+        this.shows = new ArrayList<>();
+    }
+    
+    public void addShow(Show show) {
+        shows.add(show);
+    }
+    
+    public List<Show> getShows() {
+        return new ArrayList<>(shows);
+    }
+    
+    public List<Show> getShowsInCity(String cityName) {
+        return shows.stream()
+            .filter(show -> show.getPlayedAt().getCinema().getLocation().getCity().equalsIgnoreCase(cityName))
+            .collect(Collectors.toList());
+    }
+    
+    // Getters
+    public String getTitle() { return title; }
+    public String getDescription() { return description; }
+    public int getDurationInMins() { return durationInMins; }
+    public String getLanguage() { return language; }
+    public LocalDate getReleaseDate() { return releaseDate; }
+    public String getCountry() { return country; }
+    public String getGenre() { return genre; }
+}
+
+class Show {
+    private String showId;
+    private LocalDate createdOn;
+    private LocalDateTime startTime;
+    private LocalDateTime endTime;
+    private CinemaHall playedAt;
+    private Movie movie;
+    private List<ShowSeat> showSeats;
+    
+    public Show(String showId, CinemaHall playedAt, Movie movie, LocalDateTime startTime, LocalDateTime endTime) {
+        this.showId = showId;
+        this.playedAt = playedAt;
+        this.movie = movie;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.createdOn = LocalDate.now();
+        this.showSeats = playedAt.createShowSeats(calculateBasePrice());
+    }
+    
+    public List<ShowSeat> getAvailableSeats() {
+        return showSeats.stream()
+            .filter(seat -> !seat.isReserved())
+            .collect(Collectors.toList());
+    }
+    
+    public boolean reserveSeats(List<ShowSeat> seats) {
+        for (ShowSeat seat : seats) {
+            if (seat.isReserved()) {
+                return false; // At least one seat is already reserved
+            }
+        }
+        
+        for (ShowSeat seat : seats) {
+            seat.setReserved(true);
+        }
+        return true;
+    }
+    
+    public void releaseSeats(List<ShowSeat> seats) {
+        for (ShowSeat seat : seats) {
+            seat.setReserved(false);
+        }
+    }
+    
+    private double calculateBasePrice() {
+        // Base price logic based on movie, time, etc.
+        return 10.0; // Default base price
+    }
+    
+    // Getters
+    public String getShowId() { return showId; }
+    public LocalDateTime getStartTime() { return startTime; }
+    public LocalDateTime getEndTime() { return endTime; }
+    public CinemaHall getPlayedAt() { return playedAt; }
+    public Movie getMovie() { return movie; }
+    public List<ShowSeat> getShowSeats() { return new ArrayList<>(showSeats); }
+}

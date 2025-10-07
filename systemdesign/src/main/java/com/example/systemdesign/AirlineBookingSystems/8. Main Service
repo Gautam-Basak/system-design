@@ -1,0 +1,81 @@
+8. Main Service Classes
+java
+
+@Service
+public class BookingService {
+    
+    private final BookingRepository bookingRepository;
+    private final BookingFactory bookingFactory;
+    private final BookingValidationService validationService;
+    private final List<BookingObserver> observers;
+    
+    @Autowired
+    public BookingService(BookingRepository bookingRepository,
+                         BookingFactory bookingFactory,
+                         BookingValidationService validationService,
+                         List<BookingObserver> observers) {
+        this.bookingRepository = bookingRepository;
+        this.bookingFactory = bookingFactory;
+        this.validationService = validationService;
+        this.observers = observers;
+    }
+    
+    public Booking createBooking(Passenger passenger, Flight flight, List<Seat> seats) {
+        Booking booking = bookingFactory.createFlightBooking(passenger, flight, seats);
+        
+        // Validate booking
+        ValidationResult validation = validationService.validateBooking(booking);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException(validation.getMessage());
+        }
+        
+        Booking savedBooking = bookingRepository.save(booking);
+        
+        // Notify observers
+        observers.forEach(observer -> observer.onBookingCreated(savedBooking));
+        
+        return savedBooking;
+    }
+    
+    public void confirmBooking(String bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+        
+        // Generate ticket
+        generateTicket(booking);
+        
+        // Notify observers
+        observers.forEach(observer -> observer.onBookingConfirmed(booking));
+    }
+    
+    public void cancelBooking(String bookingId) {
+        Booking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        
+        booking.setStatus(BookingStatus.CANCELLED);
+        bookingRepository.save(booking);
+        
+        // Notify observers
+        observers.forEach(observer -> observer.onBookingCancelled(booking));
+    }
+    
+    private void generateTicket(Booking booking) {
+        Ticket ticket = new Ticket();
+        ticket.setTicketNumber("TKT_" + UUID.randomUUID().toString().substring(0, 8));
+        ticket.setBookingId(booking.getBookingId());
+        ticket.setPassengerName(booking.getPassengers().get(0).getName());
+        ticket.setFlightNumber(booking.getFlightNumber());
+        ticket.setSeatNumber(booking.getSelectedSeats().get(0).getSeatNumber());
+        ticket.setQrCode(generateQRCode(ticket.getTicketNumber()));
+        
+        booking.setTicket(ticket);
+    }
+    
+    private String generateQRCode(String ticketNumber) {
+        // QR code generation logic
+        return "QR_CODE_" + ticketNumber;
+    }
+}

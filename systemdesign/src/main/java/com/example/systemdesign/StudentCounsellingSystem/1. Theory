@@ -1,0 +1,35 @@
+Design Patterns Used:
+Repository Pattern - Data access abstraction
+
+Service Layer Pattern - Business logic separation
+
+Factory Pattern - Object creation
+
+Strategy Pattern - Different reminder strategies
+
+Observer Pattern - Notifications
+
+DTO Pattern - Data transfer objects
+
+Dependency Injection - Loose coupling
+
+
+
+
+Appointment Management - Book, cancel, and manage counselling sessions with status tracking
+
+Student & Counsellor Management - User profiles with specialization tracking and search
+
+Time Slot Management - Availability checking, slot reservation, and conflict prevention
+
+Session Notes - Create and store counselling session notes with authorization
+
+Notification System - Email/SMS confirmations, reminders, and alerts using Strategy pattern
+
+Reminder System - Automated 24-hour appointment reminders using Observer pattern
+
+Status Tracking - Complete appointment lifecycle (scheduled, in-progress, completed, cancelled, no-show)
+
+Security & Authorization - Role-based access control for appointments and notes
+
+REST API - HTTP endpoints for appointment operations

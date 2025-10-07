@@ -1,0 +1,148 @@
+Appointment Management - Book, cancel, and manage counselling sessions with status tracking
+
+Student & Counsellor Management - User profiles with specialization tracking and search
+
+Time Slot Management - Availability checking, slot reservation, and conflict prevention
+
+
+// Main Service Class
+@Service
+public class AppointmentService {
+    
+    private final AppointmentRepository appointmentRepository;
+    private final StudentRepository studentRepository;
+    private final CounsellorRepository counsellorRepository;
+    private final TimeSlotRepository timeSlotRepository;
+    private final NotificationService notificationService;
+    
+    @Autowired
+    public AppointmentService(AppointmentRepository appointmentRepository,
+                            StudentRepository studentRepository,
+                            CounsellorRepository counsellorRepository,
+                            TimeSlotRepository timeSlotRepository,
+                            NotificationService notificationService) {
+        this.appointmentRepository = appointmentRepository;
+        this.studentRepository = studentRepository;
+        this.counsellorRepository = counsellorRepository;
+        this.timeSlotRepository = timeSlotRepository;
+        this.notificationService = notificationService;
+    }
+    
+    public AppointmentResponse bookAppointment(AppointmentRequest request) {
+        // Validate student exists
+        Student student = studentRepository.findById(request.getStudentId())
+            .orElseThrow(() -> new IllegalArgumentException("Student not found"));
+        
+        // Validate counsellor exists
+        Counsellor counsellor = counsellorRepository.findById(request.getCounsellorId())
+            .orElseThrow(() -> new IllegalArgumentException("Counsellor not found"));
+        
+        // Check time slot availability
+        if (!isTimeSlotAvailable(request.getCounsellorId(), request.getPreferredTime())) {
+            throw new IllegalArgumentException("Time slot not available");
+        }
+        
+        // Create appointment
+        Appointment appointment = new Appointment(
+            generateAppointmentId(),
+            request.getStudentId(),
+            request.getCounsellorId(),
+            request.getPreferredTime(),
+            AppointmentStatus.SCHEDULED,
+            50, // default duration
+            request.getConcernCategory()
+        );
+        
+        Appointment savedAppointment = appointmentRepository.save(appointment);
+        
+        // Mark time slot as unavailable
+        timeSlotRepository.markSlotUnavailable(
+            request.getCounsellorId(), 
+            request.getPreferredTime()
+        );
+        
+        // Send confirmation notification
+        notificationService.sendAppointmentConfirmation(savedAppointment, student);
+        
+        return convertToResponse(savedAppointment, student, counsellor);
+    }
+    
+    public void cancelAppointment(String appointmentId, String studentId) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+        
+        if (!appointment.getStudentId().equals(studentId)) {
+            throw new SecurityException("Not authorized to cancel this appointment");
+        }
+        
+        if (appointment.getStatus() != AppointmentStatus.SCHEDULED) {
+            throw new IllegalStateException("Only scheduled appointments can be cancelled");
+        }
+        
+        appointment.setStatus(AppointmentStatus.CANCELLED);
+        appointmentRepository.save(appointment);
+        
+        // Free up the time slot
+        timeSlotRepository.markSlotAvailable(
+            appointment.getCounsellorId(),
+            appointment.getDateTime()
+        );
+        
+        // Send cancellation notification
+        Student student = studentRepository.findById(studentId).orElse(null);
+        if (student != null) {
+            notificationService.sendAppointmentCancellation(appointment, student);
+        }
+    }
+    
+    public SessionNote createSessionNote(String appointmentId, String counsellorId, String content) {
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+            .orElseThrow(() -> new IllegalArgumentException("Appointment not found"));
+        
+        if (!appointment.getCounsellorId().equals(counsellorId)) {
+            throw new SecurityException("Not authorized to add notes to this appointment");
+        }
+        
+        if (appointment.getStatus() != AppointmentStatus.COMPLETED) {
+            throw new IllegalStateException("Can only add notes to completed appointments");
+        }
+        
+        SessionNote sessionNote = new SessionNote(
+            generateNoteId(),
+            appointmentId,
+            counsellorId,
+            content,
+            LocalDateTime.now()
+        );
+        
+        return sessionNoteRepository.save(sessionNote);
+    }
+    
+    private boolean isTimeSlotAvailable(String counsellorId, LocalDateTime dateTime) {
+        List<TimeSlot> availableSlots = timeSlotRepository
+            .findAvailableSlotsByCounsellor(counsellorId, dateTime.toLocalDate());
+        
+        return availableSlots.stream()
+            .anyMatch(slot -> slot.getStartTime().equals(dateTime) && slot.isAvailable());
+    }
+    
+    private String generateAppointmentId() {
+        return "APT_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    private String generateNoteId() {
+        return "NOTE_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+    
+    private AppointmentResponse convertToResponse(Appointment appointment, 
+                                                Student student, Counsellor counsellor) {
+        return new AppointmentResponse(
+            appointment.getAppointmentId(),
+            student.getName(),
+            counsellor.getName(),
+            appointment.getDateTime(),
+            appointment.getStatus().name(),
+            appointment.getConcernCategory()
+        );
+    }
+}

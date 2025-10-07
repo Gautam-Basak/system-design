@@ -1,0 +1,46 @@
+6. Factory Pattern for Object Creation
+java
+
+
+// Factory for creating domain objects
+@Component
+public class DomainObjectFactory {
+    
+    public Appointment createAppointment(String studentId, String counsellorId,
+                                       LocalDateTime dateTime, String concern) {
+        return new Appointment(
+            generateId("APT"),
+            studentId,
+            counsellorId,
+            dateTime,
+            AppointmentStatus.SCHEDULED,
+            50,
+            concern
+        );
+    }
+    
+    public SessionNote createSessionNote(String appointmentId, String counsellorId, 
+                                       String content) {
+        return new SessionNote(
+            generateId("NOTE"),
+            appointmentId,
+            counsellorId,
+            content,
+            LocalDateTime.now()
+        );
+    }
+    
+    public TimeSlot createTimeSlot(String counsellorId, LocalDateTime startTime, 
+                                 LocalDateTime endTime) {
+        return new TimeSlot(
+            counsellorId,
+            startTime,
+            endTime,
+            true
+        );
+    }
+    
+    private String generateId(String prefix) {
+        return prefix + "_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+}

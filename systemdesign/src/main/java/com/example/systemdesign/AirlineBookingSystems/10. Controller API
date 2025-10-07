@@ -1,0 +1,51 @@
+9. REST Controllers
+java
+
+
+@RestController
+@RequestMapping("/api/bookings")
+public class BookingController {
+    
+    private final BookingFacade bookingFacade;
+    private final FlightSearchService flightSearchService;
+    
+    @Autowired
+    public BookingController(BookingFacade bookingFacade, 
+                           FlightSearchService flightSearchService) {
+        this.bookingFacade = bookingFacade;
+        this.flightSearchService = flightSearchService;
+    }
+    
+    @GetMapping("/search")
+    public ResponseEntity<List<Flight>> searchFlights(
+            @RequestParam String departure,
+            @RequestParam String arrival,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
+        
+        List<Flight> flights = flightSearchService.searchFlights(departure, arrival, date);
+        return ResponseEntity.ok(flights);
+    }
+    
+    @PostMapping
+    public ResponseEntity<BookingResult> createBooking(@RequestBody BookingRequest request) {
+        BookingResult result = bookingFacade.completeBooking(request);
+        
+        if (result.isSuccess()) {
+            return ResponseEntity.ok(result);
+        } else {
+            return ResponseEntity.badRequest().body(result);
+        }
+    }
+    
+    @DeleteMapping("/{bookingId}")
+    public ResponseEntity<String> cancelBooking(@PathVariable String bookingId) {
+        // Implementation
+        return ResponseEntity.ok("Booking cancelled successfully");
+    }
+    
+    @GetMapping("/{bookingId}")
+    public ResponseEntity<Booking> getBooking(@PathVariable String bookingId) {
+        // Implementation
+        return ResponseEntity.ok().build();
+    }
+}

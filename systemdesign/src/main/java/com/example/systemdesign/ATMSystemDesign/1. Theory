@@ -1,0 +1,25 @@
+Design Patterns Used:
+Factory Pattern - Account hierarchy (Saving/Checking)
+
+Strategy Pattern - Different transaction types
+
+State Pattern - TransactionStatus, CustomerStatus enums
+
+Template Method Pattern - Transaction abstract class
+
+Composite Pattern - ATM components hierarchy
+
+
+
+Core Functionalities:
+Bank & ATM Management - Bank branches and ATM locations
+
+User Authentication - Card and PIN verification
+
+Account Management - Saving and Checking accounts
+
+Transaction Processing - Withdraw, Deposit, Transfer, Balance Inquiry
+
+Cash Management - Dispenser and Deposit slot operations
+
+Hardware Integration - Screen, Keypad, Printer components

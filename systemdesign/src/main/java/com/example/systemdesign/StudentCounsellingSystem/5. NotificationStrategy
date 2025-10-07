@@ -1,0 +1,95 @@
+4. Strategy Pattern for Notifications
+java
+
+// Strategy Interface
+public interface NotificationStrategy {
+    void sendNotification(String recipient, String subject, String message);
+    boolean supports(NotificationType type);
+}
+
+// Concrete Strategies
+@Component
+public class EmailNotificationStrategy implements NotificationStrategy {
+    
+    @Override
+    public void sendNotification(String recipient, String subject, String message) {
+        // Implementation for sending email
+        System.out.println("Sending email to: " + recipient);
+        System.out.println("Subject: " + subject);
+        System.out.println("Message: " + message);
+    }
+    
+    @Override
+    public boolean supports(NotificationType type) {
+        return type == NotificationType.EMAIL;
+    }
+}
+
+@Component
+public class SMSNotificationStrategy implements NotificationStrategy {
+    
+    @Override
+    public void sendNotification(String recipient, String subject, String message) {
+        // Implementation for sending SMS
+        System.out.println("Sending SMS to: " + recipient);
+        System.out.println("Message: " + message);
+    }
+    
+    @Override
+    public boolean supports(NotificationType type) {
+        return type == NotificationType.SMS;
+    }
+}
+
+// Notification Context
+@Service
+public class NotificationService {
+    
+    private final List<NotificationStrategy> strategies;
+    
+    @Autowired
+    public NotificationService(List<NotificationStrategy> strategies) {
+        this.strategies = strategies;
+    }
+    
+    public void sendAppointmentConfirmation(Appointment appointment, Student student) {
+        String subject = "Appointment Confirmation";
+        String message = String.format(
+            "Your appointment with counsellor is confirmed for %s",
+            appointment.getDateTime()
+        );
+        
+        sendNotification(student, NotificationType.EMAIL, subject, message);
+    }
+    
+    public void sendAppointmentCancellation(Appointment appointment, Student student) {
+        String subject = "Appointment Cancelled";
+        String message = "Your appointment has been cancelled successfully";
+        
+        sendNotification(student, NotificationType.EMAIL, subject, message);
+    }
+    
+    public void sendReminder(Appointment appointment, Student student) {
+        String subject = "Appointment Reminder";
+        String message = String.format(
+            "Reminder: You have an appointment tomorrow at %s",
+            appointment.getDateTime()
+        );
+        
+        sendNotification(student, NotificationType.EMAIL, subject, message);
+        sendNotification(student, NotificationType.SMS, subject, message);
+    }
+    
+    private void sendNotification(Student student, NotificationType type, 
+                                 String subject, String message) {
+        NotificationStrategy strategy = strategies.stream()
+            .filter(s -> s.supports(type))
+            .findFirst()
+            .orElseThrow(() -> new IllegalArgumentException("No strategy found for type: " + type));
+        
+        String recipient = type == NotificationType.EMAIL ? 
+            student.getEmail() : student.getPhoneNumber();
+        
+        strategy.sendNotification(recipient, subject, message);
+    }
+}

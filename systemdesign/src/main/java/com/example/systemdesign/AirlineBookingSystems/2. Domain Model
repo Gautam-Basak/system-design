@@ -1,0 +1,127 @@
+1. Domain Models
+java
+
+
+// Enums
+public enum BookingStatus {
+    PENDING, CONFIRMED, CANCELLED, CHECKED_IN, COMPLETED
+}
+
+public enum SeatClass {
+    ECONOMY, PREMIUM_ECONOMY, BUSINESS, FIRST
+}
+
+public enum PaymentStatus {
+    PENDING, SUCCESSFUL, FAILED, REFUNDED
+}
+
+public enum PaymentMethod {
+    CREDIT_CARD, DEBIT_CARD, PAYPAL, WALLET
+}
+
+// Domain Entities
+public class Flight {
+    private String flightNumber;
+    private String airline;
+    private String departureAirport;
+    private String arrivalAirport;
+    private LocalDateTime departureTime;
+    private LocalDateTime arrivalTime;
+    private int totalSeats;
+    private Map<SeatClass, Double> basePrices;
+    private List<Seat> seats;
+    
+    // Builder Pattern implementation
+    public static class Builder {
+        private String flightNumber;
+        private String airline;
+        // ... other fields
+        
+        public Builder flightNumber(String flightNumber) {
+            this.flightNumber = flightNumber;
+            return this;
+        }
+        
+        public Flight build() {
+            return new Flight(this);
+        }
+    }
+    
+    private Flight(Builder builder) {
+        this.flightNumber = builder.flightNumber;
+        this.airline = builder.airline;
+        // ... other assignments
+    }
+    
+    // Getters and setters
+}
+
+public class Seat {
+    private String seatNumber;
+    private SeatClass seatClass;
+    private boolean isAvailable;
+    private double price;
+    private List<SeatFeature> features; // Window, Aisle, Extra Legroom
+    
+    // Getters and setters
+}
+
+public class Booking {
+    private String bookingId;
+    private String passengerId;
+    private String flightNumber;
+    private LocalDateTime bookingDate;
+    private BookingStatus status;
+    private List<Passenger> passengers;
+    private List<Seat> selectedSeats;
+    private double totalAmount;
+    private Payment payment;
+    private Ticket ticket;
+    
+    // Getters and setters
+}
+
+public class Passenger {
+    private String passengerId;
+    private String name;
+    private String email;
+    private String phone;
+    private Date dateOfBirth;
+    private String passportNumber;
+    private LoyaltyAccount loyaltyAccount;
+    
+    // Getters and setters
+}
+
+public class Payment {
+    private String paymentId;
+    private double amount;
+    private PaymentMethod method;
+    private PaymentStatus status;
+    private LocalDateTime paymentDate;
+    private String transactionId;
+    
+    // Getters and setters
+}
+
+public class Ticket {
+    private String ticketNumber;
+    private String bookingId;
+    private String passengerName;
+    private String flightNumber;
+    private LocalDateTime departureTime;
+    private String seatNumber;
+    private String qrCode;
+    
+    // Getters and setters
+}
+
+public class LoyaltyAccount {
+    private String accountId;
+    private String passengerId;
+    private int pointsBalance;
+    private String tier; // Silver, Gold, Platinum
+    private List<LoyaltyTransaction> transactions;
+    
+    // Getters and setters
+}

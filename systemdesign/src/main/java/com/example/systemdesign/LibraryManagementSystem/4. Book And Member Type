@@ -1,0 +1,194 @@
+3. Factory Pattern - Book Types & Member Types
+
+// Book Factory
+@Component
+public class BookFactory {
+    
+    public Book createBook(BookType type, String isbn, String title, String author, 
+                          String publisher, int publicationYear) {
+        switch (type) {
+            case REGULAR:
+                return createRegularBook(isbn, title, author, publisher, publicationYear);
+            case REFERENCE:
+                return createReferenceBook(isbn, title, author, publisher, publicationYear);
+            case PERIODICAL:
+                return createPeriodical(isbn, title, author, publisher, publicationYear);
+            case EBOOK:
+                return createEBook(isbn, title, author, publisher, publicationYear);
+            case AUDIOBOOK:
+                return createAudioBook(isbn, title, author, publisher, publicationYear);
+            default:
+                throw new IllegalArgumentException("Unknown book type: " + type);
+        }
+    }
+    
+    private Book createRegularBook(String isbn, String title, String author, 
+                                  String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.REGULAR);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(1);
+        book.setAvailableCopies(1);
+        book.setAcquisitionDate(LocalDate.now());
+        return book;
+    }
+    
+    private Book createReferenceBook(String isbn, String title, String author,
+                                   String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.REFERENCE);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(1);
+        book.setAvailableCopies(1);
+        book.setAcquisitionDate(LocalDate.now());
+        // Reference books cannot be borrowed
+        BookItem item = new BookItem();
+        item.setReferenceOnly(true);
+        return book;
+    }
+    
+    private Book createPeriodical(String isbn, String title, String author,
+                                String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.PERIODICAL);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(1);
+        book.setAvailableCopies(1);
+        book.setAcquisitionDate(LocalDate.now());
+        // Shorter loan period for periodicals
+        return book;
+    }
+    
+    private Book createEBook(String isbn, String title, String author,
+                           String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.EBOOK);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(Integer.MAX_VALUE); // Unlimited copies
+        book.setAvailableCopies(Integer.MAX_VALUE);
+        book.setAcquisitionDate(LocalDate.now());
+        return book;
+    }
+    
+    private Book createAudioBook(String isbn, String title, String author,
+                               String publisher, int publicationYear) {
+        Book book = new Book();
+        book.setIsbn(isbn);
+        book.setTitle(title);
+        book.setAuthor(author);
+        book.setPublisher(publisher);
+        book.setPublicationYear(publicationYear);
+        book.setBookType(BookType.AUDIOBOOK);
+        book.setStatus(BookStatus.AVAILABLE);
+        book.setTotalCopies(1);
+        book.setAvailableCopies(1);
+        book.setAcquisitionDate(LocalDate.now());
+        return book;
+    }
+}
+
+
+
+// Member Factory
+@Component
+public class MemberFactory {
+    
+    public Member createMember(MemberType type, String name, String email, String phone) {
+        switch (type) {
+            case STUDENT:
+                return createStudentMember(name, email, phone);
+            case FACULTY:
+                return createFacultyMember(name, email, phone);
+            case STAFF:
+                return createStaffMember(name, email, phone);
+            case GUEST:
+                return createGuestMember(name, email, phone);
+            default:
+                throw new IllegalArgumentException("Unknown member type: " + type);
+        }
+    }
+    
+    private Member createStudentMember(String name, String email, String phone) {
+        Member member = new Member();
+        member.setMemberId(generateMemberId("STU"));
+        member.setName(name);
+        member.setEmail(email);
+        member.setPhone(phone);
+        member.setMemberType(MemberType.STUDENT);
+        member.setRegistrationDate(LocalDate.now());
+        member.setMembershipExpiry(LocalDate.now().plusYears(1));
+        member.setMaxBooksAllowed(5);
+        member.setCurrentBooksBorrowed(0);
+        member.setTotalFines(0.0);
+        return member;
+    }
+    
+    private Member createFacultyMember(String name, String email, String phone) {
+        Member member = new Member();
+        member.setMemberId(generateMemberId("FAC"));
+        member.setName(name);
+        member.setEmail(email);
+        member.setPhone(phone);
+        member.setMemberType(MemberType.FACULTY);
+        member.setRegistrationDate(LocalDate.now());
+        member.setMembershipExpiry(LocalDate.now().plusYears(2));
+        member.setMaxBooksAllowed(10);
+        member.setCurrentBooksBorrowed(0);
+        member.setTotalFines(0.0);
+        return member;
+    }
+    
+    private Member createStaffMember(String name, String email, String phone) {
+        Member member = new Member();
+        member.setMemberId(generateMemberId("STA"));
+        member.setName(name);
+        member.setEmail(email);
+        member.setPhone(phone);
+        member.setMemberType(MemberType.STAFF);
+        member.setRegistrationDate(LocalDate.now());
+        member.setMembershipExpiry(LocalDate.now().plusYears(1));
+        member.setMaxBooksAllowed(8);
+        member.setCurrentBooksBorrowed(0);
+        member.setTotalFines(0.0);
+        return member;
+    }
+    
+    private Member createGuestMember(String name, String email, String phone) {
+        Member member = new Member();
+        member.setMemberId(generateMemberId("GST"));
+        member.setName(name);
+        member.setEmail(email);
+        member.setPhone(phone);
+        member.setMemberType(MemberType.GUEST);
+        member.setRegistrationDate(LocalDate.now());
+        member.setMembershipExpiry(LocalDate.now().plusMonths(6));
+        member.setMaxBooksAllowed(3);
+        member.setCurrentBooksBorrowed(0);
+        member.setTotalFines(0.0);
+        return member;
+    }
+    
+    private String generateMemberId(String prefix) {
+        return prefix + "_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}

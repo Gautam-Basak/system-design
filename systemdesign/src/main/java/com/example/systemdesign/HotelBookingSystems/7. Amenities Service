@@ -1,0 +1,129 @@
+6. Decorator Pattern - Adding Amenities to Bookings
+java
+
+// Booking Decorator Base Class
+public abstract class BookingDecorator extends HotelBooking {
+    protected HotelBooking decoratedBooking;
+    
+    public BookingDecorator(HotelBooking booking) {
+        this.decoratedBooking = booking;
+    }
+    
+    @Override
+    public double getTotalAmount() {
+        return decoratedBooking.getTotalAmount() + getAdditionalCost();
+    }
+    
+    @Override
+    public List<Amenity> getSelectedAmenities() {
+        List<Amenity> amenities = new ArrayList<>(decoratedBooking.getSelectedAmenities());
+        amenities.addAll(getAdditionalAmenities());
+        return amenities;
+    }
+    
+    protected abstract double getAdditionalCost();
+    protected abstract List<Amenity> getAdditionalAmenities();
+}
+
+// Concrete Decorators
+public class BreakfastDecorator extends BookingDecorator {
+    private static final double BREAKFAST_COST = 25.0;
+    
+    public BreakfastDecorator(HotelBooking booking) {
+        super(booking);
+    }
+    
+    @Override
+    protected double getAdditionalCost() {
+        long nights = ChronoUnit.DAYS.between(
+            decoratedBooking.getCheckInDate(), decoratedBooking.getCheckOutDate());
+        return BREAKFAST_COST * nights * decoratedBooking.getGuests().size();
+    }
+    
+    @Override
+    protected List<Amenity> getAdditionalAmenities() {
+        Amenity breakfast = new Amenity("BFST", "Breakfast", "Daily breakfast buffet", 
+                                       BREAKFAST_COST, false);
+        return Arrays.asList(breakfast);
+    }
+    
+    @Override
+    public String getDescription() {
+        return decoratedBooking.getDescription() + " + Breakfast";
+    }
+}
+
+public class SpaDecorator extends BookingDecorator {
+    private static final double SPA_PACKAGE_COST = 150.0;
+    
+    public SpaDecorator(HotelBooking booking) {
+        super(booking);
+    }
+    
+    @Override
+    protected double getAdditionalCost() {
+        return SPA_PACKAGE_COST * decoratedBooking.getGuests().size();
+    }
+    
+    @Override
+    protected List<Amenity> getAdditionalAmenities() {
+        Amenity spa = new Amenity("SPA", "Spa Package", "Full spa access with massage", 
+                                 SPA_PACKAGE_COST, false);
+        return Arrays.asList(spa);
+    }
+    
+    @Override
+    public String getDescription() {
+        return decoratedBooking.getDescription() + " + Spa Package";
+    }
+}
+
+public class AirportTransferDecorator extends BookingDecorator {
+    private static final double TRANSFER_COST = 50.0;
+    
+    public AirportTransferDecorator(HotelBooking booking) {
+        super(booking);
+    }
+    
+    @Override
+    protected double getAdditionalCost() {
+        return TRANSFER_COST * 2; // Round trip
+    }
+    
+    @Override
+    protected List<Amenity> getAdditionalAmenities() {
+        Amenity transfer = new Amenity("TRNSF", "Airport Transfer", "Round trip airport transfer", 
+                                      TRANSFER_COST, false);
+        return Arrays.asList(transfer);
+    }
+    
+    @Override
+    public String getDescription() {
+        return decoratedBooking.getDescription() + " + Airport Transfer";
+    }
+}
+
+// Decorator Service
+@Service
+public class AmenityDecoratorService {
+    
+    public HotelBooking addAmenities(HotelBooking booking, List<String> amenityCodes) {
+        HotelBooking decoratedBooking = booking;
+        
+        for (String code : amenityCodes) {
+            switch (code) {
+                case "BREAKFAST":
+                    decoratedBooking = new BreakfastDecorator(decoratedBooking);
+                    break;
+                case "SPA":
+                    decoratedBooking = new SpaDecorator(decoratedBooking);
+                    break;
+                case "TRANSFER":
+                    decoratedBooking = new AirportTransferDecorator(decoratedBooking);
+                    break;
+            }
+        }
+        
+        return decoratedBooking;
+    }
+}

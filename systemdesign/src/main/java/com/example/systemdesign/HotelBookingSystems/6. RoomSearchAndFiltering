@@ -1,0 +1,163 @@
+5. Specification Pattern - Room Search & Filtering
+java
+
+// Enhanced Specification Interface
+public interface RoomSpecification {
+    boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut);
+    String getDescription();
+}
+
+// Concrete Specifications
+public class RoomTypeSpecification implements RoomSpecification {
+    private final RoomType requiredType;
+    
+    public RoomTypeSpecification(RoomType type) {
+        this.requiredType = type;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return room.getRoomType() == requiredType;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Room type: " + requiredType;
+    }
+}
+
+public class CapacitySpecification implements RoomSpecification {
+    private final int minCapacity;
+    private final int maxCapacity;
+    
+    public CapacitySpecification(int minCapacity, int maxCapacity) {
+        this.minCapacity = minCapacity;
+        this.maxCapacity = maxCapacity;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return room.getCapacity() >= minCapacity && room.getCapacity() <= maxCapacity;
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Capacity between " + minCapacity + " and " + maxCapacity;
+    }
+}
+
+public class AvailabilitySpecification implements RoomSpecification {
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return room.getUnavailablePeriods().stream()
+            .noneMatch(unavailable -> isOverlapping(unavailable, checkIn, checkOut));
+    }
+    
+    private boolean isOverlapping(RoomUnavailablePeriod unavailable, 
+                                 LocalDate checkIn, LocalDate checkOut) {
+        return !checkOut.isBefore(unavailable.getStartDate()) && 
+               !checkIn.isAfter(unavailable.getEndDate());
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Available for selected dates";
+    }
+}
+
+public class AmenitySpecification implements RoomSpecification {
+    private final List<String> requiredAmenities;
+    
+    public AmenitySpecification(List<String> amenities) {
+        this.requiredAmenities = amenities;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return room.getRoomAmenities().stream()
+            .map(Amenity::getName)
+            .collect(Collectors.toList())
+            .containsAll(requiredAmenities);
+    }
+    
+    @Override
+    public String getDescription() {
+        return "Includes amenities: " + String.join(", ", requiredAmenities);
+    }
+}
+
+// Composite Specifications
+public class AndSpecification implements RoomSpecification {
+    private final List<RoomSpecification> specifications;
+    
+    public AndSpecification(List<RoomSpecification> specifications) {
+        this.specifications = specifications;
+    }
+    
+    @Override
+    public boolean isSatisfiedBy(Room room, LocalDate checkIn, LocalDate checkOut) {
+        return specifications.stream()
+            .allMatch(spec -> spec.isSatisfiedBy(room, checkIn, checkOut));
+    }
+    
+    @Override
+    public String getDescription() {
+        return specifications.stream()
+            .map(RoomSpecification::getDescription)
+            .collect(Collectors.joining(" AND "));
+    }
+}
+
+// Specification Builder
+public class RoomSpecificationBuilder {
+    private List<RoomSpecification> specifications = new ArrayList<>();
+    
+    public RoomSpecificationBuilder withType(RoomType type) {
+        specifications.add(new RoomTypeSpecification(type));
+        return this;
+    }
+    
+    public RoomSpecificationBuilder withCapacity(int min, int max) {
+        specifications.add(new CapacitySpecification(min, max));
+        return this;
+    }
+    
+    public RoomSpecificationBuilder withAmenities(List<String> amenities) {
+        specifications.add(new AmenitySpecification(amenities));
+        return this;
+    }
+    
+    public RoomSpecificationBuilder availableBetween(LocalDate checkIn, LocalDate checkOut) {
+        specifications.add(new AvailabilitySpecification());
+        return this;
+    }
+    
+    public RoomSpecification build() {
+        return new AndSpecification(specifications);
+    }
+}
+
+// Specification Service
+@Service
+public class RoomSearchService {
+    private final RoomRepository roomRepository;
+    
+    @Autowired
+    public RoomSearchService(RoomRepository roomRepository) {
+        this.roomRepository = roomRepository;
+    }
+    
+    public List<Room> searchRooms(SearchRequest request) {
+        RoomSpecification spec = new RoomSpecificationBuilder()
+            .withType(request.getRoomType())
+            .withCapacity(request.getGuestCount(), request.getGuestCount() + 2)
+            .withAmenities(request.getRequiredAmenities())
+            .availableBetween(request.getCheckInDate(), request.getCheckOutDate())
+            .build();
+        
+        List<Room> allRooms = roomRepository.findByHotelId(request.getHotelId());
+        return allRooms.stream()
+            .filter(room -> spec.isSatisfiedBy(room, request.getCheckInDate(), request.getCheckOutDate()))
+            .collect(Collectors.toList());
+    }
+}

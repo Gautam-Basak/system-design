@@ -1,0 +1,65 @@
+4. Repository Pattern - Data Access Abstraction
+java
+
+
+// Repository Interfaces
+public interface HotelRepository {
+    Optional<Hotel> findById(String hotelId);
+    List<Hotel> findByCity(String city);
+    List<Hotel> findByCriteria(SearchCriteria criteria);
+    Hotel save(Hotel hotel);
+}
+
+public interface RoomRepository {
+    Optional<Room> findById(String roomId);
+    List<Room> findByHotelId(String hotelId);
+    List<Room> findByHotelIdAndType(String hotelId, RoomType roomType);
+    List<Room> findAvailableRooms(String hotelId, LocalDate checkIn, LocalDate checkOut);
+    Room save(Room room);
+    void updateAvailability(String roomId, LocalDate date, boolean available);
+}
+
+public interface BookingRepository {
+    Optional<HotelBooking> findById(String bookingId);
+    List<HotelBooking> findByGuestEmail(String email);
+    List<HotelBooking> findByHotelAndDateRange(String hotelId, LocalDate start, LocalDate end);
+    List<HotelBooking> findByStatus(BookingStatus status);
+    HotelBooking save(HotelBooking booking);
+    void updateStatus(String bookingId, BookingStatus status);
+}
+
+public interface GuestRepository {
+    Optional<Guest> findById(String guestId);
+    Optional<Guest> findByEmail(String email);
+    Guest save(Guest guest);
+}
+
+// JPA Implementation Example
+@Repository
+public class JpaBookingRepository implements BookingRepository {
+    @PersistenceContext
+    private EntityManager entityManager;
+    
+    @Override
+    public Optional<HotelBooking> findById(String bookingId) {
+        return Optional.ofNullable(entityManager.find(HotelBooking.class, bookingId));
+    }
+    
+    @Override
+    public List<HotelBooking> findByGuestEmail(String email) {
+        return entityManager.createQuery(
+            "SELECT b FROM HotelBooking b JOIN b.guests g WHERE g.email = :email", HotelBooking.class)
+            .setParameter("email", email)
+            .getResultList();
+    }
+    
+    @Override
+    public HotelBooking save(HotelBooking booking) {
+        if (booking.getBookingId() == null) {
+            entityManager.persist(booking);
+            return booking;
+        } else {
+            return entityManager.merge(booking);
+        }
+    }
+}

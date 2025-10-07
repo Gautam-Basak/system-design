@@ -1,0 +1,35 @@
+Design Patterns Used:
+
+Factory Pattern - For creating different booking types
+
+Strategy Pattern - For payment methods and pricing strategies
+
+Observer Pattern - For notifications and booking status updates
+
+Repository Pattern - For data access abstraction
+
+Facade Pattern - For simplified booking interface
+
+Builder Pattern - For complex object creation (flights, bookings)
+
+Chain of Responsibility - For booking validation pipeline
+
+
+
+Core Functionalities:
+
+Flight Search & Availability
+
+Seat Selection & Management
+
+Booking Creation & Management
+
+Payment Processing
+
+Ticket Generation
+
+Cancellation & Refunds
+
+Notification System
+
+Loyalty Points Management

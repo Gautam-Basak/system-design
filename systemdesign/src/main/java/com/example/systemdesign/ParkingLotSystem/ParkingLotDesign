@@ -1,0 +1,982 @@
+Design Patterns Used:
+Singleton Pattern - ParkingLot class (only one instance)
+
+Factory Pattern - Vehicle and ParkingSpot creation
+
+Strategy Pattern - Different parking rate calculations
+
+Observer Pattern - Display board updates
+
+Template Method Pattern - Parking spot assignment logic
+
+State Pattern - Parking ticket status
+
+
+Core Functionalities:
+Vehicle & Spot Management (Registration, Type Handling)
+Ticket System (Generation, Status Tracking)
+Payment Processing (Calculation, Multiple Methods)
+Real-time Monitoring (Display Boards, Availability Updates)
+Administrative Controls (Floor/Spot Configuration)
+Basic User Accounts (Admin/Attendant Roles)
+
+
+1. Constants and Enums
+java
+// Enums
+public enum VehicleType {
+    CAR, TRUCK, ELECTRIC, VAN, MOTORBIKE
+}
+
+public enum ParkingSpotType {
+    HANDICAPPED, COMPACT, LARGE, MOTORBIKE, ELECTRIC
+}
+
+public enum AccountStatus {
+    ACTIVE, BLOCKED, BANNED, COMPROMISED, ARCHIVED, UNKNOWN
+}
+
+public enum ParkingTicketStatus {
+    ACTIVE, PAID, LOST
+}
+
+2. Entity Classes
+java
+// Address.java
+public class Address {
+    private String streetAddress;
+    private String city;
+    private String state;
+    private String zipCode;
+    private String country;
+    
+    public Address(String streetAddress, String city, String state, String zipCode, String country) {
+        this.streetAddress = streetAddress;
+        this.city = city;
+        this.state = state;
+        this.zipCode = zipCode;
+        this.country = country;
+    }
+    
+    // Getters and setters
+    public String getStreetAddress() { return streetAddress; }
+    public void setStreetAddress(String streetAddress) { this.streetAddress = streetAddress; }
+    public String getCity() { return city; }
+    public void setCity(String city) { this.city = city; }
+    public String getState() { return state; }
+    public void setState(String state) { this.state = state; }
+    public String getZipCode() { return zipCode; }
+    public void setZipCode(String zipCode) { this.zipCode = zipCode; }
+    public String getCountry() { return country; }
+    public void setCountry(String country) { this.country = country; }
+}
+
+// Person.java
+public class Person {
+    private String name;
+    private Address address;
+    private String email;
+    private String phone;
+    
+    public Person(String name, Address address, String email, String phone) {
+        this.name = name;
+        this.address = address;
+        this.email = email;
+        this.phone = phone;
+    }
+    
+    // Getters and setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public Address getAddress() { return address; }
+    public void setAddress(Address address) { this.address = address; }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
+}
+
+
+
+
+3. Account Management (Factory Pattern)
+java
+// Account.java
+public abstract class Account {
+    private String userName;
+    private String password;
+    private Person person;
+    private AccountStatus status;
+    
+    public Account(String userName, String password, Person person, AccountStatus status) {
+        this.userName = userName;
+        this.password = password;
+        this.person = person;
+        this.status = status;
+    }
+    
+    public boolean resetPassword() {
+        // Implementation to reset password
+        System.out.println("Password reset for user: " + userName);
+        return true;
+    }
+    
+    // Getters and setters
+    public String getUserName() { return userName; }
+    public void setUserName(String userName) { this.userName = userName; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+    public Person getPerson() { return person; }
+    public void setPerson(Person person) { this.person = person; }
+    public AccountStatus getStatus() { return status; }
+    public void setStatus(AccountStatus status) { this.status = status; }
+}
+
+// Admin.java
+public class Admin extends Account {
+    public Admin(String userName, String password, Person person, AccountStatus status) {
+        super(userName, password, person, status);
+    }
+    
+    public boolean addParkingFloor(ParkingFloor floor) {
+        // Implementation to add parking floor
+        System.out.println("Adding parking floor: " + floor.getName());
+        return true;
+    }
+    
+    public boolean addParkingSpot(String floorName, ParkingSpot spot) {
+        // Implementation to add parking spot
+        System.out.println("Adding parking spot " + spot.getNumber() + " to floor " + floorName);
+        return true;
+    }
+    
+    public boolean addParkingDisplayBoard(String floorName, ParkingDisplayBoard displayBoard) {
+        // Implementation to add display board
+        System.out.println("Adding display board to floor " + floorName);
+        return true;
+    }
+    
+    public boolean addCustomerInfoPanel(String floorName, CustomerInfoPanel infoPanel) {
+        // Implementation to add info panel
+        System.out.println("Adding customer info panel to floor " + floorName);
+        return true;
+    }
+    
+    public boolean addEntrancePanel(EntrancePanel entrancePanel) {
+        // Implementation to add entrance panel
+        System.out.println("Adding entrance panel");
+        return true;
+    }
+    
+    public boolean addExitPanel(ExitPanel exitPanel) {
+        // Implementation to add exit panel
+        System.out.println("Adding exit panel");
+        return true;
+    }
+}
+
+// ParkingAttendant.java
+public class ParkingAttendant extends Account {
+    public ParkingAttendant(String userName, String password, Person person, AccountStatus status) {
+        super(userName, password, person, status);
+    }
+    
+    public ParkingTicket processTicket(String ticketNumber) {
+        // Implementation to process ticket
+        System.out.println("Processing ticket: " + ticketNumber);
+        return null; // Should return actual ticket
+    }
+    
+    public boolean processPayment(ParkingTicket ticket, PaymentType paymentType) {
+        // Implementation to process payment
+        System.out.println("Processing payment for ticket: " + ticket.getTicketNumber());
+        return true;
+    }
+}
+
+
+
+
+4. Vehicle Classes (Factory Pattern)
+java
+// Vehicle.java
+public abstract class Vehicle {
+    private String licenseNumber;
+    private VehicleType type;
+    private ParkingTicket ticket;
+    
+    public Vehicle(String licenseNumber, VehicleType type, ParkingTicket ticket) {
+        this.licenseNumber = licenseNumber;
+        this.type = type;
+        this.ticket = ticket;
+    }
+    
+    public void assignTicket(ParkingTicket ticket) {
+        this.ticket = ticket;
+    }
+    
+    // Getters and setters
+    public String getLicenseNumber() { return licenseNumber; }
+    public void setLicenseNumber(String licenseNumber) { this.licenseNumber = licenseNumber; }
+    public VehicleType getType() { return type; }
+    public void setType(VehicleType type) { this.type = type; }
+    public ParkingTicket getTicket() { return ticket; }
+    public void setTicket(ParkingTicket ticket) { this.ticket = ticket; }
+}
+
+// Car.java
+public class Car extends Vehicle {
+    public Car(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.CAR, ticket);
+    }
+}
+
+// Truck.java
+public class Truck extends Vehicle {
+    public Truck(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.TRUCK, ticket);
+    }
+}
+
+// Van.java
+public class Van extends Vehicle {
+    public Van(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.VAN, ticket);
+    }
+}
+
+// MotorBike.java
+public class MotorBike extends Vehicle {
+    public MotorBike(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.MOTORBIKE, ticket);
+    }
+}
+
+// ElectricVehicle.java
+public class ElectricVehicle extends Vehicle {
+    public ElectricVehicle(String licenseNumber, ParkingTicket ticket) {
+        super(licenseNumber, VehicleType.ELECTRIC, ticket);
+    }
+}
+
+
+
+
+5. Parking Spot Classes (Factory Pattern)
+java
+// ParkingSpot.java
+public abstract class ParkingSpot {
+    private String number;
+    private boolean free;
+    private Vehicle vehicle;
+    private ParkingSpotType type;
+    
+    public ParkingSpot(String number, ParkingSpotType type) {
+        this.number = number;
+        this.type = type;
+        this.free = true;
+        this.vehicle = null;
+    }
+    
+    public boolean isFree() {
+        return free;
+    }
+    
+    public void assignVehicle(Vehicle vehicle) {
+        this.vehicle = vehicle;
+        this.free = false;
+    }
+    
+    public void removeVehicle() {
+        this.vehicle = null;
+        this.free = true;
+    }
+    
+    // Getters and setters
+    public String getNumber() { return number; }
+    public void setNumber(String number) { this.number = number; }
+    public Vehicle getVehicle() { return vehicle; }
+    public void setVehicle(Vehicle vehicle) { this.vehicle = vehicle; }
+    public ParkingSpotType getType() { return type; }
+    public void setType(ParkingSpotType type) { this.type = type; }
+}
+
+// HandicappedSpot.java
+public class HandicappedSpot extends ParkingSpot {
+    public HandicappedSpot(String number) {
+        super(number, ParkingSpotType.HANDICAPPED);
+    }
+}
+
+// CompactSpot.java
+public class CompactSpot extends ParkingSpot {
+    public CompactSpot(String number) {
+        super(number, ParkingSpotType.COMPACT);
+    }
+}
+
+// LargeSpot.java
+public class LargeSpot extends ParkingSpot {
+    public LargeSpot(String number) {
+        super(number, ParkingSpotType.LARGE);
+    }
+}
+
+// MotorbikeSpot.java
+public class MotorbikeSpot extends ParkingSpot {
+    public MotorbikeSpot(String number) {
+        super(number, ParkingSpotType.MOTORBIKE);
+    }
+}
+
+// ElectricSpot.java
+public class ElectricSpot extends ParkingSpot {
+    public ElectricSpot(String number) {
+        super(number, ParkingSpotType.ELECTRIC);
+    }
+}
+
+
+
+
+6. Display Board (Observer Pattern)
+java
+// ParkingDisplayBoard.java
+public class ParkingDisplayBoard {
+    private String id;
+    private ParkingSpot handicappedFreeSpot;
+    private ParkingSpot compactFreeSpot;
+    private ParkingSpot largeFreeSpot;
+    private ParkingSpot motorbikeFreeSpot;
+    private ParkingSpot electricFreeSpot;
+    
+    public ParkingDisplayBoard(String id) {
+        this.id = id;
+    }
+    
+    public void showEmptySpotNumber() {
+        StringBuilder message = new StringBuilder();
+        
+        if (handicappedFreeSpot != null && handicappedFreeSpot.isFree()) {
+            message.append("Free Handicapped: ").append(handicappedFreeSpot.getNumber());
+        } else {
+            message.append("Handicapped is full");
+        }
+        message.append("\n");
+        
+        if (compactFreeSpot != null && compactFreeSpot.isFree()) {
+            message.append("Free Compact: ").append(compactFreeSpot.getNumber());
+        } else {
+            message.append("Compact is full");
+        }
+        message.append("\n");
+        
+        if (largeFreeSpot != null && largeFreeSpot.isFree()) {
+            message.append("Free Large: ").append(largeFreeSpot.getNumber());
+        } else {
+            message.append("Large is full");
+        }
+        message.append("\n");
+        
+        if (motorbikeFreeSpot != null && motorbikeFreeSpot.isFree()) {
+            message.append("Free Motorbike: ").append(motorbikeFreeSpot.getNumber());
+        } else {
+            message.append("Motorbike is full");
+        }
+        message.append("\n");
+        
+        if (electricFreeSpot != null && electricFreeSpot.isFree()) {
+            message.append("Free Electric: ").append(electricFreeSpot.getNumber());
+        } else {
+            message.append("Electric is full");
+        }
+        
+        System.out.println(message.toString());
+    }
+    
+    // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public ParkingSpot getHandicappedFreeSpot() { return handicappedFreeSpot; }
+    public void setHandicappedFreeSpot(ParkingSpot handicappedFreeSpot) { this.handicappedFreeSpot = handicappedFreeSpot; }
+    public ParkingSpot getCompactFreeSpot() { return compactFreeSpot; }
+    public void setCompactFreeSpot(ParkingSpot compactFreeSpot) { this.compactFreeSpot = compactFreeSpot; }
+    public ParkingSpot getLargeFreeSpot() { return largeFreeSpot; }
+    public void setLargeFreeSpot(ParkingSpot largeFreeSpot) { this.largeFreeSpot = largeFreeSpot; }
+    public ParkingSpot getMotorbikeFreeSpot() { return motorbikeFreeSpot; }
+    public void setMotorbikeFreeSpot(ParkingSpot motorbikeFreeSpot) { this.motorbikeFreeSpot = motorbikeFreeSpot; }
+    public ParkingSpot getElectricFreeSpot() { return electricFreeSpot; }
+    public void setElectricFreeSpot(ParkingSpot electricFreeSpot) { this.electricFreeSpot = electricFreeSpot; }
+}
+
+
+
+
+7. Parking Floor
+java
+// ParkingFloor.java
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+
+public class ParkingFloor {
+    private String name;
+    private Map<String, ParkingSpot> handicappedSpots;
+    private Map<String, ParkingSpot> compactSpots;
+    private Map<String, ParkingSpot> largeSpots;
+    private Map<String, ParkingSpot> motorbikeSpots;
+    private Map<String, ParkingSpot> electricSpots;
+    private Map<String, CustomerInfoPanel> infoPortals;
+    private int freeHandicappedSpotCount;
+    private int freeCompactSpotCount;
+    private int freeLargeSpotCount;
+    private int freeMotorbikeSpotCount;
+    private int freeElectricSpotCount;
+    private ParkingDisplayBoard displayBoard;
+    
+    public ParkingFloor(String name) {
+        this.name = name;
+        this.handicappedSpots = new ConcurrentHashMap<>();
+        this.compactSpots = new ConcurrentHashMap<>();
+        this.largeSpots = new ConcurrentHashMap<>();
+        this.motorbikeSpots = new ConcurrentHashMap<>();
+        this.electricSpots = new ConcurrentHashMap<>();
+        this.infoPortals = new ConcurrentHashMap<>();
+        this.freeHandicappedSpotCount = 0;
+        this.freeCompactSpotCount = 0;
+        this.freeLargeSpotCount = 0;
+        this.freeMotorbikeSpotCount = 0;
+        this.freeElectricSpotCount = 0;
+        this.displayBoard = new ParkingDisplayBoard(name + "_DisplayBoard");
+    }
+    
+    public synchronized void addParkingSpot(ParkingSpot spot) {
+        switch (spot.getType()) {
+            case HANDICAPPED:
+                handicappedSpots.put(spot.getNumber(), spot);
+                freeHandicappedSpotCount++;
+                updateDisplayBoardForHandicapped();
+                break;
+            case COMPACT:
+                compactSpots.put(spot.getNumber(), spot);
+                freeCompactSpotCount++;
+                updateDisplayBoardForCompact();
+                break;
+            case LARGE:
+                largeSpots.put(spot.getNumber(), spot);
+                freeLargeSpotCount++;
+                updateDisplayBoardForLarge();
+                break;
+            case MOTORBIKE:
+                motorbikeSpots.put(spot.getNumber(), spot);
+                freeMotorbikeSpotCount++;
+                updateDisplayBoardForMotorbike();
+                break;
+            case ELECTRIC:
+                electricSpots.put(spot.getNumber(), spot);
+                freeElectricSpotCount++;
+                updateDisplayBoardForElectric();
+                break;
+            default:
+                throw new IllegalArgumentException("Wrong parking spot type");
+        }
+    }
+    
+    public synchronized void assignVehicleToSpot(Vehicle vehicle, ParkingSpot spot) {
+        spot.assignVehicle(vehicle);
+        
+        switch (spot.getType()) {
+            case HANDICAPPED:
+                freeHandicappedSpotCount--;
+                updateDisplayBoardForHandicapped();
+                break;
+            case COMPACT:
+                freeCompactSpotCount--;
+                updateDisplayBoardForCompact();
+                break;
+            case LARGE:
+                freeLargeSpotCount--;
+                updateDisplayBoardForLarge();
+                break;
+            case MOTORBIKE:
+                freeMotorbikeSpotCount--;
+                updateDisplayBoardForMotorbike();
+                break;
+            case ELECTRIC:
+                freeElectricSpotCount--;
+                updateDisplayBoardForElectric();
+                break;
+            default:
+                throw new IllegalArgumentException("Wrong parking spot type!");
+        }
+    }
+    
+    public synchronized void freeSpot(ParkingSpot spot) {
+        spot.removeVehicle();
+        
+        switch (spot.getType()) {
+            case HANDICAPPED:
+                freeHandicappedSpotCount++;
+                updateDisplayBoardForHandicapped();
+                break;
+            case COMPACT:
+                freeCompactSpotCount++;
+                updateDisplayBoardForCompact();
+                break;
+            case LARGE:
+                freeLargeSpotCount++;
+                updateDisplayBoardForLarge();
+                break;
+            case MOTORBIKE:
+                freeMotorbikeSpotCount++;
+                updateDisplayBoardForMotorbike();
+                break;
+            case ELECTRIC:
+                freeElectricSpotCount++;
+                updateDisplayBoardForElectric();
+                break;
+            default:
+                throw new IllegalArgumentException("Wrong parking spot type!");
+        }
+    }
+    
+    private void updateDisplayBoardForHandicapped() {
+        if (displayBoard.getHandicappedFreeSpot() == null || 
+            !displayBoard.getHandicappedFreeSpot().isFree()) {
+            for (ParkingSpot spot : handicappedSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setHandicappedFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    private void updateDisplayBoardForCompact() {
+        if (displayBoard.getCompactFreeSpot() == null || 
+            !displayBoard.getCompactFreeSpot().isFree()) {
+            for (ParkingSpot spot : compactSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setCompactFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    private void updateDisplayBoardForLarge() {
+        if (displayBoard.getLargeFreeSpot() == null || 
+            !displayBoard.getLargeFreeSpot().isFree()) {
+            for (ParkingSpot spot : largeSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setLargeFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    private void updateDisplayBoardForMotorbike() {
+        if (displayBoard.getMotorbikeFreeSpot() == null || 
+            !displayBoard.getMotorbikeFreeSpot().isFree()) {
+            for (ParkingSpot spot : motorbikeSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setMotorbikeFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    private void updateDisplayBoardForElectric() {
+        if (displayBoard.getElectricFreeSpot() == null || 
+            !displayBoard.getElectricFreeSpot().isFree()) {
+            for (ParkingSpot spot : electricSpots.values()) {
+                if (spot.isFree()) {
+                    displayBoard.setElectricFreeSpot(spot);
+                    break;
+                }
+            }
+        }
+        displayBoard.showEmptySpotNumber();
+    }
+    
+    public boolean isFull() {
+        return freeHandicappedSpotCount == 0 && freeCompactSpotCount == 0 &&
+               freeLargeSpotCount == 0 && freeMotorbikeSpotCount == 0 &&
+               freeElectricSpotCount == 0;
+    }
+    
+    // Getters and setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public Map<String, ParkingSpot> getHandicappedSpots() { return handicappedSpots; }
+    public Map<String, ParkingSpot> getCompactSpots() { return compactSpots; }
+    public Map<String, ParkingSpot> getLargeSpots() { return largeSpots; }
+    public Map<String, ParkingSpot> getMotorbikeSpots() { return motorbikeSpots; }
+    public Map<String, ParkingSpot> getElectricSpots() { return electricSpots; }
+    public int getFreeHandicappedSpotCount() { return freeHandicappedSpotCount; }
+    public int getFreeCompactSpotCount() { return freeCompactSpotCount; }
+    public int getFreeLargeSpotCount() { return freeLargeSpotCount; }
+    public int getFreeMotorbikeSpotCount() { return freeMotorbikeSpotCount; }
+    public int getFreeElectricSpotCount() { return freeElectricSpotCount; }
+    public ParkingDisplayBoard getDisplayBoard() { return displayBoard; }
+    public void setDisplayBoard(ParkingDisplayBoard displayBoard) { this.displayBoard = displayBoard; }
+}
+
+
+
+
+8. Parking Ticket and Rate (Strategy Pattern)
+java
+// ParkingTicket.java
+import java.time.LocalDateTime;
+import java.util.UUID;
+
+public class ParkingTicket {
+    private String ticketNumber;
+    private LocalDateTime issuedAt;
+    private LocalDateTime paidAt;
+    private double amount;
+    private ParkingTicketStatus status;
+    private String vehicleLicenseNumber;
+    private String spotNumber;
+    
+    public ParkingTicket() {
+        this.ticketNumber = "TKT_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+        this.issuedAt = LocalDateTime.now();
+        this.status = ParkingTicketStatus.ACTIVE;
+    }
+    
+    public void saveInDB() {
+        // Implementation to save ticket in database
+        System.out.println("Saving ticket " + ticketNumber + " in database");
+    }
+    
+    public void updateInDB() {
+        // Implementation to update ticket in database
+        System.out.println("Updating ticket " + ticketNumber + " in database");
+    }
+    
+    // Getters and setters
+    public String getTicketNumber() { return ticketNumber; }
+    public void setTicketNumber(String ticketNumber) { this.ticketNumber = ticketNumber; }
+    public LocalDateTime getIssuedAt() { return issuedAt; }
+    public void setIssuedAt(LocalDateTime issuedAt) { this.issuedAt = issuedAt; }
+    public LocalDateTime getPaidAt() { return paidAt; }
+    public void setPaidAt(LocalDateTime paidAt) { this.paidAt = paidAt; }
+    public double getAmount() { return amount; }
+    public void setAmount(double amount) { this.amount = amount; }
+    public ParkingTicketStatus getStatus() { return status; }
+    public void setStatus(ParkingTicketStatus status) { this.status = status; }
+    public String getVehicleLicenseNumber() { return vehicleLicenseNumber; }
+    public void setVehicleLicenseNumber(String vehicleLicenseNumber) { this.vehicleLicenseNumber = vehicleLicenseNumber; }
+    public String getSpotNumber() { return spotNumber; }
+    public void setSpotNumber(String spotNumber) { this.spotNumber = spotNumber; }
+}
+
+// ParkingRate.java
+public class ParkingRate {
+    private double hourlyRate;
+    private double dailyRate;
+    private double weeklyRate;
+    
+    public ParkingRate() {
+        this.hourlyRate = 5.0;
+        this.dailyRate = 50.0;
+        this.weeklyRate = 250.0;
+    }
+    
+    public double calculateCharges(LocalDateTime entryTime, LocalDateTime exitTime) {
+        long hours = java.time.Duration.between(entryTime, exitTime).toHours();
+        
+        if (hours <= 1) {
+            return hourlyRate;
+        } else if (hours <= 24) {
+            return Math.min(hourlyRate * hours, dailyRate);
+        } else if (hours <= 168) { // 7 days
+            long days = (hours + 23) / 24; // Ceiling division
+            return Math.min(dailyRate * days, weeklyRate);
+        } else {
+            long weeks = (hours + 167) / 168; // Ceiling division
+            return weeklyRate * weeks;
+        }
+    }
+    
+    // Getters and setters
+    public double getHourlyRate() { return hourlyRate; }
+    public void setHourlyRate(double hourlyRate) { this.hourlyRate = hourlyRate; }
+    public double getDailyRate() { return dailyRate; }
+    public void setDailyRate(double dailyRate) { this.dailyRate = dailyRate; }
+    public double getWeeklyRate() { return weeklyRate; }
+    public void setWeeklyRate(double weeklyRate) { this.weeklyRate = weeklyRate; }
+}
+
+
+
+
+9. Parking Lot (Singleton Pattern)
+java
+// ParkingLot.java
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.locks.ReentrantLock;
+
+public class ParkingLot {
+    // Singleton instance
+    private static ParkingLot instance;
+    private static final ReentrantLock lock = new ReentrantLock();
+    
+    private String name;
+    private Address address;
+    private ParkingRate parkingRate;
+    
+    private int compactSpotCount;
+    private int largeSpotCount;
+    private int motorbikeSpotCount;
+    private int electricSpotCount;
+    private int maxCompactCount;
+    private int maxLargeCount;
+    private int maxMotorbikeCount;
+    private int maxElectricCount;
+    
+    private Map<String, EntrancePanel> entrancePanels;
+    private Map<String, ExitPanel> exitPanels;
+    private Map<String, ParkingFloor> parkingFloors;
+    
+    // All active parking tickets
+    private Map<String, ParkingTicket> activeTickets;
+    
+    private ParkingLot(String name, Address address) {
+        this.name = name;
+        this.address = address;
+        this.parkingRate = new ParkingRate();
+        
+        this.entrancePanels = new ConcurrentHashMap<>();
+        this.exitPanels = new ConcurrentHashMap<>();
+        this.parkingFloors = new ConcurrentHashMap<>();
+        this.activeTickets = new ConcurrentHashMap<>();
+        
+        // Initialize with default values
+        this.maxCompactCount = 100;
+        this.maxLargeCount = 50;
+        this.maxMotorbikeCount = 30;
+        this.maxElectricCount = 20;
+    }
+    
+    public static ParkingLot getInstance(String name, Address address) {
+        if (instance == null) {
+            lock.lock();
+            try {
+                if (instance == null) {
+                    instance = new ParkingLot(name, address);
+                }
+            } finally {
+                lock.unlock();
+            }
+        }
+        return instance;
+    }
+    
+    public synchronized ParkingTicket getNewParkingTicket(Vehicle vehicle) {
+        if (isFull(vehicle.getType())) {
+            throw new RuntimeException("Parking full!");
+        }
+        
+        ParkingTicket ticket = new ParkingTicket();
+        vehicle.assignTicket(ticket);
+        ticket.setVehicleLicenseNumber(vehicle.getLicenseNumber());
+        ticket.saveInDB();
+        
+        incrementSpotCount(vehicle.getType());
+        activeTickets.put(ticket.getTicketNumber(), ticket);
+        
+        return ticket;
+    }
+    
+    public boolean isFull(VehicleType type) {
+        // Trucks and vans can only be parked in LargeSpot
+        if (type == VehicleType.TRUCK || type == VehicleType.VAN) {
+            return largeSpotCount >= maxLargeCount;
+        }
+        
+        // Motorbikes can only be parked at motorbike spots
+        if (type == VehicleType.MOTORBIKE) {
+            return motorbikeSpotCount >= maxMotorbikeCount;
+        }
+        
+        // Cars can be parked at compact or large spots
+        if (type == VehicleType.CAR) {
+            return (compactSpotCount + largeSpotCount) >= (maxCompactCount + maxLargeCount);
+        }
+        
+        // Electric car can be parked at compact, large or electric spots
+        return (compactSpotCount + largeSpotCount + electricSpotCount) >= 
+               (maxCompactCount + maxLargeCount + maxElectricCount);
+    }
+    
+    private void incrementSpotCount(VehicleType type) {
+        if (type == VehicleType.TRUCK || type == VehicleType.VAN) {
+            largeSpotCount++;
+        } else if (type == VehicleType.MOTORBIKE) {
+            motorbikeSpotCount++;
+        } else if (type == VehicleType.CAR) {
+            if (compactSpotCount < maxCompactCount) {
+                compactSpotCount++;
+            } else {
+                largeSpotCount++;
+            }
+        } else if (type == VehicleType.ELECTRIC) {
+            if (electricSpotCount < maxElectricCount) {
+                electricSpotCount++;
+            } else if (compactSpotCount < maxCompactCount) {
+                compactSpotCount++;
+            } else {
+                largeSpotCount++;
+            }
+        }
+    }
+    
+    public void decrementSpotCount(VehicleType type) {
+        if (type == VehicleType.TRUCK || type == VehicleType.VAN) {
+            largeSpotCount--;
+        } else if (type == VehicleType.MOTORBIKE) {
+            motorbikeSpotCount--;
+        } else if (type == VehicleType.CAR) {
+            if (compactSpotCount > 0) {
+                compactSpotCount--;
+            } else {
+                largeSpotCount--;
+            }
+        } else if (type == VehicleType.ELECTRIC) {
+            if (electricSpotCount > 0) {
+                electricSpotCount--;
+            } else if (compactSpotCount > 0) {
+                compactSpotCount--;
+            } else {
+                largeSpotCount--;
+            }
+        }
+    }
+    
+    public boolean isFull() {
+        for (ParkingFloor floor : parkingFloors.values()) {
+            if (!floor.isFull()) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    public void addParkingFloor(ParkingFloor floor) {
+        parkingFloors.put(floor.getName(), floor);
+        // Update spot counts based on the new floor
+        updateSpotCounts();
+    }
+    
+    public void addEntrancePanel(EntrancePanel entrancePanel) {
+        entrancePanels.put(entrancePanel.getId(), entrancePanel);
+    }
+    
+    public void addExitPanel(ExitPanel exitPanel) {
+        exitPanels.put(exitPanel.getId(), exitPanel);
+    }
+    
+    private void updateSpotCounts() {
+        // Implementation to update spot counts based on all floors
+        // This would iterate through all floors and sum up the spots
+    }
+    
+    public boolean processPayment(ParkingTicket ticket, PaymentType paymentType) {
+        ticket.setPaidAt(java.time.LocalDateTime.now());
+        ticket.setStatus(ParkingTicketStatus.PAID);
+        ticket.setAmount(parkingRate.calculateCharges(ticket.getIssuedAt(), ticket.getPaidAt()));
+        ticket.updateInDB();
+        
+        activeTickets.remove(ticket.getTicketNumber());
+        decrementSpotCount(getVehicleTypeFromTicket(ticket));
+        
+        return true;
+    }
+    
+    private VehicleType getVehicleTypeFromTicket(ParkingTicket ticket) {
+        // Implementation to get vehicle type from ticket
+        // This would typically query the database
+        return VehicleType.CAR; // Default
+    }
+    
+    // Getters and setters
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+    public Address getAddress() { return address; }
+    public void setAddress(Address address) { this.address = address; }
+    public ParkingRate getParkingRate() { return parkingRate; }
+    public void setParkingRate(ParkingRate parkingRate) { this.parkingRate = parkingRate; }
+    public Map<String, ParkingFloor> getParkingFloors() { return parkingFloors; }
+}
+
+
+
+
+10. Supporting Classes
+java
+// EntrancePanel.java
+public class EntrancePanel {
+    private String id;
+    
+    public EntrancePanel(String id) {
+        this.id = id;
+    }
+    
+    public ParkingTicket printTicket(Vehicle vehicle) {
+        ParkingLot parkingLot = ParkingLot.getInstance("Main Parking", null);
+        return parkingLot.getNewParkingTicket(vehicle);
+    }
+    
+    // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+}
+
+// ExitPanel.java
+public class ExitPanel {
+    private String id;
+    
+    public ExitPanel(String id) {
+        this.id = id;
+    }
+    
+    public boolean processPayment(ParkingTicket ticket, PaymentType paymentType) {
+        ParkingLot parkingLot = ParkingLot.getInstance("Main Parking", null);
+        return parkingLot.processPayment(ticket, paymentType);
+    }
+    
+    // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+}
+
+// CustomerInfoPanel.java
+public class CustomerInfoPanel {
+    private String id;
+    
+    public CustomerInfoPanel(String id) {
+        this.id = id;
+    }
+    
+    public void showMessage(String message) {
+        System.out.println("Customer Info Panel " + id + ": " + message);
+    }
+    
+    // Getters and setters
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+}
+
+// PaymentType.java
+public enum PaymentType {
+    CASH, CREDIT_CARD, DEBIT_CARD, UPI, WALLET
+}

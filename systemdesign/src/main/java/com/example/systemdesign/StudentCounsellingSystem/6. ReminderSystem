@@ -1,0 +1,89 @@
+5. Observer Pattern for Reminder System
+java
+
+
+// Observer Interface
+public interface AppointmentObserver {
+    void onAppointmentScheduled(Appointment appointment);
+    void onAppointment24HoursBefore(Appointment appointment);
+}
+
+// Observable Subject
+@Service
+public class AppointmentScheduler {
+    
+    private final List<AppointmentObserver> observers = new ArrayList<>();
+    
+    public void addObserver(AppointmentObserver observer) {
+        observers.add(observer);
+    }
+    
+    public void removeObserver(AppointmentObserver observer) {
+        observers.remove(observer);
+    }
+    
+    public void scheduleAppointment(Appointment appointment) {
+        // Save appointment logic...
+        
+        // Notify observers
+        notifyAppointmentScheduled(appointment);
+        
+        // Schedule 24-hour reminder
+        schedule24HourReminder(appointment);
+    }
+    
+    private void notifyAppointmentScheduled(Appointment appointment) {
+        observers.forEach(observer -> 
+            observer.onAppointmentScheduled(appointment));
+    }
+    
+    private void notifyAppointment24HoursBefore(Appointment appointment) {
+        observers.forEach(observer -> 
+            observer.onAppointment24HoursBefore(appointment));
+    }
+    
+    private void schedule24HourReminder(Appointment appointment) {
+        // Implementation to schedule reminder 24 hours before appointment
+        Timer timer = new Timer();
+        LocalDateTime reminderTime = appointment.getDateTime().minusHours(24);
+        
+        // Convert to Date and schedule task
+        timer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                notifyAppointment24HoursBefore(appointment);
+            }
+        }, java.sql.Timestamp.valueOf(reminderTime));
+    }
+}
+
+// Concrete Observer
+@Component
+public class ReminderService implements AppointmentObserver {
+    
+    private final NotificationService notificationService;
+    private final StudentRepository studentRepository;
+    
+    @Autowired
+    public ReminderService(NotificationService notificationService,
+                          StudentRepository studentRepository) {
+        this.notificationService = notificationService;
+        this.studentRepository = studentRepository;
+    }
+    
+    @Override
+    public void onAppointmentScheduled(Appointment appointment) {
+        // Send immediate confirmation
+        studentRepository.findById(appointment.getStudentId()).ifPresent(student -> {
+            notificationService.sendAppointmentConfirmation(appointment, student);
+        });
+    }
+    
+    @Override
+    public void onAppointment24HoursBefore(Appointment appointment) {
+        // Send 24-hour reminder
+        studentRepository.findById(appointment.getStudentId()).ifPresent(student -> {
+            notificationService.sendReminder(appointment, student);
+        });
+    }
+}

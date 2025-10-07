@@ -1,0 +1,100 @@
+// Item Class
+class Item {
+    private String productId;
+    private int quantity;
+    private double price;
+    private String productName;
+    
+    public Item(String productId, String productName, int quantity, double price) {
+        this.productId = productId;
+        this.productName = productName;
+        this.quantity = quantity;
+        this.price = price;
+    }
+    
+    public void updateQuantity(int quantity) {
+        if (quantity < 0) {
+            throw new IllegalArgumentException("Quantity cannot be negative");
+        }
+        this.quantity = quantity;
+        System.out.println("Quantity updated for " + productName + ": " + quantity);
+    }
+    
+    public double getTotalPrice() {
+        return price * quantity;
+    }
+    
+    // Getters
+    public String getProductId() { return productId; }
+    public int getQuantity() { return quantity; }
+    public double getPrice() { return price; }
+    public String getProductName() { return productName; }
+}
+
+// ShoppingCart Class
+class ShoppingCart {
+    private List<Item> items;
+    private double totalAmount;
+    
+    public ShoppingCart() {
+        this.items = new ArrayList<>();
+        this.totalAmount = 0.0;
+    }
+    
+    public void addItem(Item item) {
+        // Check if item already exists
+        Optional<Item> existingItem = items.stream()
+            .filter(i -> i.getProductId().equals(item.getProductId()))
+            .findFirst();
+            
+        if (existingItem.isPresent()) {
+            existingItem.get().updateQuantity(existingItem.get().getQuantity() + item.getQuantity());
+        } else {
+            items.add(item);
+        }
+        calculateTotal();
+        System.out.println("Item added to cart: " + item.getProductName());
+    }
+    
+    public void removeItem(Item item) {
+        boolean removed = items.removeIf(i -> i.getProductId().equals(item.getProductId()));
+        if (removed) {
+            calculateTotal();
+            System.out.println("Item removed from cart: " + item.getProductName());
+        }
+    }
+    
+    public void updateItemQuantity(Item item, int quantity) {
+        items.stream()
+            .filter(i -> i.getProductId().equals(item.getProductId()))
+            .findFirst()
+            .ifPresent(i -> i.updateQuantity(quantity));
+        calculateTotal();
+    }
+    
+    public List<Item> getItems() { 
+        return new ArrayList<>(items); 
+    }
+    
+    public void checkout() {
+        if (items.isEmpty()) {
+            throw new IllegalStateException("Cannot checkout with empty cart");
+        }
+        System.out.println("Checkout completed. Total amount: $" + totalAmount);
+        System.out.println("Items in order: " + items.size());
+    }
+    
+    public void clearCart() {
+        items.clear();
+        totalAmount = 0.0;
+        System.out.println("Cart cleared");
+    }
+    
+    private void calculateTotal() {
+        totalAmount = items.stream()
+            .mapToDouble(Item::getTotalPrice)
+            .sum();
+    }
+    
+    public double getTotalAmount() { return totalAmount; }
+}

@@ -1,0 +1,58 @@
+6. Facade Pattern for Simplified Booking
+java
+
+
+// Booking Facade
+@Service
+public class BookingFacade {
+    
+    private final FlightSearchService flightSearchService;
+    private final SeatSelectionService seatSelectionService;
+    private final BookingService bookingService;
+    private final PaymentService paymentService;
+    private final NotificationService notificationService;
+    
+    @Autowired
+    public BookingFacade(FlightSearchService flightSearchService,
+                        SeatSelectionService seatSelectionService,
+                        BookingService bookingService,
+                        PaymentService paymentService,
+                        NotificationService notificationService) {
+        this.flightSearchService = flightSearchService;
+        this.seatSelectionService = seatSelectionService;
+        this.bookingService = bookingService;
+        this.paymentService = paymentService;
+        this.notificationService = notificationService;
+    }
+    
+    public BookingResult completeBooking(BookingRequest request) {
+        try {
+            // Step 1: Validate flight and seat availability
+            Flight flight = flightSearchService.validateFlight(request.getFlightNumber());
+            List<Seat> availableSeats = seatSelectionService.validateSeats(
+                request.getFlightNumber(), request.getSelectedSeatNumbers());
+            
+            // Step 2: Create booking
+            Booking booking = bookingService.createBooking(
+                request.getPassenger(), flight, availableSeats);
+            
+            // Step 3: Process payment
+            PaymentResult paymentResult = paymentService.processPayment(
+                booking, request.getPaymentMethod(), request.getPaymentDetails());
+            
+            // Step 4: Confirm booking
+            if (paymentResult.getStatus() == PaymentStatus.SUCCESSFUL) {
+                bookingService.confirmBooking(booking.getBookingId());
+                notificationService.sendBookingConfirmation(booking);
+                
+                return new BookingResult(true, "Booking confirmed", booking.getBookingId());
+            } else {
+                bookingService.cancelBooking(booking.getBookingId());
+                return new BookingResult(false, "Payment failed: " + paymentResult.getMessage(), null);
+            }
+            
+        } catch (Exception e) {
+            return new BookingResult(false, e.getMessage(), null);
+        }
+    }
+}

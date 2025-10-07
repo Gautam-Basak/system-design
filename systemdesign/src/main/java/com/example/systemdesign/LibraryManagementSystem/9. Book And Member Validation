@@ -1,0 +1,196 @@
+8. Chain of Responsibility - Book & Member Validation
+
+// Validation Handler Interface
+public interface LibraryValidationHandler {
+    ValidationResult validate(Object object);
+    void setNextHandler(LibraryValidationHandler nextHandler);
+}
+
+// Abstract Base Handler
+public abstract class AbstractLibraryValidator implements LibraryValidationHandler {
+    protected LibraryValidationHandler nextHandler;
+    
+    @Override
+    public void setNextHandler(LibraryValidationHandler nextHandler) {
+        this.nextHandler = nextHandler;
+    }
+    
+    protected ValidationResult validateNext(Object object) {
+        if (nextHandler == null) {
+            return new ValidationResult(true, "All validations passed");
+        }
+        return nextHandler.validate(object);
+    }
+}
+
+// Book Validation Handlers
+@Component
+public class BookAvailabilityValidator extends AbstractLibraryValidator {
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof Book) {
+            Book book = (Book) object;
+            if (book.getAvailableCopies() <= 0) {
+                return new ValidationResult(false, "Book is not available for borrowing");
+            }
+            if (book.getStatus() != BookStatus.AVAILABLE) {
+                return new ValidationResult(false, "Book is not available: " + book.getStatus());
+            }
+        }
+        return validateNext(object);
+    }
+}
+
+@Component
+public class ReferenceBookValidator extends AbstractLibraryValidator {
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof Book) {
+            Book book = (Book) object;
+            if (book.getBookType() == BookType.REFERENCE) {
+                return new ValidationResult(false, "Reference books cannot be borrowed");
+            }
+        }
+        return validateNext(object);
+    }
+}
+
+// Member Validation Handlers
+@Component
+public class MemberEligibilityValidator extends AbstractLibraryValidator {
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof Member) {
+            Member member = (Member) object;
+            if (member.getCurrentBooksBorrowed() >= member.getMaxBooksAllowed()) {
+                return new ValidationResult(false, 
+                    "Member has reached maximum borrowing limit: " + member.getMaxBooksAllowed());
+            }
+            if (member.getTotalFines() > 0) {
+                return new ValidationResult(false, 
+                    "Member has outstanding fines: $" + member.getTotalFines());
+            }
+            if (member.getMembershipExpiry().isBefore(LocalDate.now())) {
+                return new ValidationResult(false, "Membership has expired");
+            }
+        }
+        return validateNext(object);
+    }
+}
+
+@Component
+public class MemberHistoryValidator extends AbstractLibraryValidator {
+    private final BorrowRecordRepository borrowRecordRepository;
+    
+    @Autowired
+    public MemberHistoryValidator(BorrowRecordRepository borrowRecordRepository) {
+        this.borrowRecordRepository = borrowRecordRepository;
+    }
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof Member) {
+            Member member = (Member) object;
+            List<BorrowRecord> overdueRecords = borrowRecordRepository.findOverdueRecords()
+                .stream()
+                .filter(record -> record.getMemberId().equals(member.getMemberId()))
+                .collect(Collectors.toList());
+            
+            if (!overdueRecords.isEmpty()) {
+                return new ValidationResult(false, 
+                    "Member has " + overdueRecords.size() + " overdue books");
+            }
+        }
+        return validateNext(object);
+    }
+}
+
+// Borrow Validation Handler
+@Component
+public class BorrowLimitValidator extends AbstractLibraryValidator {
+    
+    @Override
+    public ValidationResult validate(Object object) {
+        if (object instanceof BorrowRequest) {
+            BorrowRequest request = (BorrowRequest) object;
+            Member member = request.getMember();
+            Book book = request.getBook();
+            
+            if (member.getCurrentBooksBorrowed() + 1 > member.getMaxBooksAllowed()) {
+                return new ValidationResult(false, "Borrowing limit exceeded");
+            }
+            
+            // Check if member already has this book
+            // Implementation would check borrow records
+        }
+        return validateNext(object);
+    }
+}
+
+// Validation Chain Builder
+@Service
+public class LibraryValidationChain {
+    private LibraryValidationHandler bookValidationChain;
+    private LibraryValidationHandler memberValidationChain;
+    private LibraryValidationHandler borrowValidationChain;
+    
+    @Autowired
+    public LibraryValidationChain(BookAvailabilityValidator bookAvailabilityValidator,
+                                ReferenceBookValidator referenceBookValidator,
+                                MemberEligibilityValidator memberEligibilityValidator,
+                                MemberHistoryValidator memberHistoryValidator,
+                                BorrowLimitValidator borrowLimitValidator) {
+        
+        // Build book validation chain
+        this.bookValidationChain = bookAvailabilityValidator;
+        bookAvailabilityValidator.setNextHandler(referenceBookValidator);
+        
+        // Build member validation chain
+        this.memberValidationChain = memberEligibilityValidator;
+        memberEligibilityValidator.setNextHandler(memberHistoryValidator);
+        
+        // Build borrow validation chain
+        this.borrowValidationChain = borrowLimitValidator;
+    }
+    
+    public ValidationResult validateBook(Book book) {
+        return bookValidationChain.validate(book);
+    }
+    
+    public ValidationResult validateMember(Member member) {
+        return memberValidationChain.validate(member);
+    }
+    
+    public ValidationResult validateBorrowRequest(BorrowRequest request) {
+        // Validate both book and member
+        ValidationResult bookValidation = validateBook(request.getBook());
+        if (!bookValidation.isValid()) {
+            return bookValidation;
+        }
+        
+        ValidationResult memberValidation = validateMember(request.getMember());
+        if (!memberValidation.isValid()) {
+            return memberValidation;
+        }
+        
+        return borrowValidationChain.validate(request);
+    }
+}
+
+// Validation Result
+public class ValidationResult {
+    private final boolean isValid;
+    private final String message;
+    
+    public ValidationResult(boolean isValid, String message) {
+        this.isValid = isValid;
+        this.message = message;
+    }
+    
+    // Getters
+    public boolean isValid() { return isValid; }
+    public String getMessage() { return message; }
+}

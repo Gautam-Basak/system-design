@@ -1,0 +1,212 @@
+2. Strategy Pattern - Search & Fine Calculation
+
+// Search Strategy Interface
+public interface SearchStrategy {
+    List<Book> search(String query, List<Book> bookCatalog);
+    String getStrategyName();
+}
+
+// Title Search Strategy
+@Component
+public class TitleSearchStrategy implements SearchStrategy {
+    @Override
+    public List<Book> search(String query, List<Book> bookCatalog) {
+        return bookCatalog.stream()
+            .filter(book -> book.getTitle().toLowerCase().contains(query.toLowerCase()))
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Title Search";
+    }
+}
+
+// Author Search Strategy
+@Component
+public class AuthorSearchStrategy implements SearchStrategy {
+    @Override
+    public List<Book> search(String query, List<Book> bookCatalog) {
+        return bookCatalog.stream()
+            .filter(book -> book.getAuthor().toLowerCase().contains(query.toLowerCase()))
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Author Search";
+    }
+}
+
+// ISBN Search Strategy
+@Component
+public class ISBNSearchStrategy implements SearchStrategy {
+    @Override
+    public List<Book> search(String query, List<Book> bookCatalog) {
+        return bookCatalog.stream()
+            .filter(book -> book.getIsbn().equals(query))
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "ISBN Search";
+    }
+}
+
+// Genre Search Strategy
+@Component
+public class GenreSearchStrategy implements SearchStrategy {
+    @Override
+    public List<Book> search(String query, List<Book> bookCatalog) {
+        return bookCatalog.stream()
+            .filter(book -> book.getGenres().stream()
+                .anyMatch(genre -> genre.toLowerCase().contains(query.toLowerCase())))
+            .collect(Collectors.toList());
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Genre Search";
+    }
+}
+
+// Fine Calculation Strategy Interface
+public interface FineCalculationStrategy {
+    double calculateFine(LocalDate dueDate, LocalDate returnDate, BookType bookType);
+    String getStrategyName();
+}
+
+
+
+
+// Standard Fine Strategy
+
+
+@Component
+public class StandardFineStrategy implements FineCalculationStrategy {
+    private static final double DAILY_FINE_RATE = 1.0;
+    
+    @Override
+    public double calculateFine(LocalDate dueDate, LocalDate returnDate, BookType bookType) {
+        if (returnDate.isBefore(dueDate) || returnDate.isEqual(dueDate)) {
+            return 0.0;
+        }
+        
+        long daysOverdue = ChronoUnit.DAYS.between(dueDate, returnDate);
+        return daysOverdue * DAILY_FINE_RATE;
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Standard Fine Calculation";
+    }
+}
+
+// Reference Book Fine Strategy
+@Component
+public class ReferenceBookFineStrategy implements FineCalculationStrategy {
+    private static final double DAILY_FINE_RATE = 5.0; // Higher fine for reference books
+    
+    @Override
+    public double calculateFine(LocalDate dueDate, LocalDate returnDate, BookType bookType) {
+        if (returnDate.isBefore(dueDate) || returnDate.isEqual(dueDate)) {
+            return 0.0;
+        }
+        
+        long daysOverdue = ChronoUnit.DAYS.between(dueDate, returnDate);
+        return daysOverdue * DAILY_FINE_RATE;
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Reference Book Fine Calculation";
+    }
+}
+
+// Faculty Fine Strategy (More lenient)
+@Component
+public class FacultyFineStrategy implements FineCalculationStrategy {
+    private static final double DAILY_FINE_RATE = 0.5; // Lower fine for faculty
+    
+    @Override
+    public double calculateFine(LocalDate dueDate, LocalDate returnDate, BookType bookType) {
+        if (returnDate.isBefore(dueDate) || returnDate.isEqual(dueDate)) {
+            return 0.0;
+        }
+        
+        long daysOverdue = ChronoUnit.DAYS.between(dueDate, returnDate);
+        // 7-day grace period for faculty
+        if (daysOverdue <= 7) {
+            return 0.0;
+        }
+        return (daysOverdue - 7) * DAILY_FINE_RATE;
+    }
+    
+    @Override
+    public String getStrategyName() {
+        return "Faculty Fine Calculation";
+    }
+}
+
+// Search Context
+@Service
+public class SearchContext {
+    private final Map<String, SearchStrategy> searchStrategies;
+    
+    @Autowired
+    public SearchContext(List<SearchStrategy> strategies) {
+        this.searchStrategies = strategies.stream()
+            .collect(Collectors.toMap(SearchStrategy::getStrategyName, Function.identity()));
+    }
+    
+    public List<Book> search(String strategyName, String query, List<Book> catalog) {
+        SearchStrategy strategy = searchStrategies.get(strategyName);
+        if (strategy == null) {
+            throw new IllegalArgumentException("Unknown search strategy: " + strategyName);
+        }
+        return strategy.search(query, catalog);
+    }
+    
+    public List<String> getAvailableStrategies() {
+        return new ArrayList<>(searchStrategies.keySet());
+    }
+}
+
+// Fine Context
+@Service
+public class FineContext {
+    private final Map<BookType, FineCalculationStrategy> fineStrategies;
+    private final Map<MemberType, FineCalculationStrategy> memberFineStrategies;
+    
+    @Autowired
+    public FineContext(List<FineCalculationStrategy> strategies) {
+        this.fineStrategies = Map.of(
+            BookType.REFERENCE, new ReferenceBookFineStrategy(),
+            BookType.REGULAR, new StandardFineStrategy()
+        );
+        
+        this.memberFineStrategies = Map.of(
+            MemberType.FACULTY, new FacultyFineStrategy(),
+            MemberType.STUDENT, new StandardFineStrategy(),
+            MemberType.STAFF, new StandardFineStrategy()
+        );
+    }
+    
+    public double calculateFine(Member member, Book book, LocalDate dueDate, LocalDate returnDate) {
+        // First check member-specific strategy
+        FineCalculationStrategy strategy = memberFineStrategies.get(member.getMemberType());
+        if (strategy != null) {
+            return strategy.calculateFine(dueDate, returnDate, book.getBookType());
+        }
+        
+        // Fall back to book-type strategy
+        strategy = fineStrategies.get(book.getBookType());
+        if (strategy != null) {
+            return strategy.calculateFine(dueDate, returnDate, book.getBookType());
+        }
+        
+        // Default strategy
+        return new StandardFineStrategy().calculateFine(dueDate, returnDate, book.getBookType());
+    }
+}

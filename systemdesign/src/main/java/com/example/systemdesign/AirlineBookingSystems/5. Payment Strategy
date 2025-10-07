@@ -1,0 +1,100 @@
+4. Strategy Pattern for Payment & Pricing
+java
+
+
+// Payment Strategy
+public interface PaymentStrategy {
+    PaymentResult processPayment(PaymentRequest request);
+    boolean supports(PaymentMethod method);
+}
+
+@Component
+public class CreditCardPaymentStrategy implements PaymentStrategy {
+    
+    @Override
+    public PaymentResult processPayment(PaymentRequest request) {
+        // Credit card processing logic
+        System.out.println("Processing credit card payment: " + request.getAmount());
+        
+        // Simulate payment processing
+        boolean success = Math.random() > 0.1; // 90% success rate
+        
+        return new PaymentResult(
+            success ? PaymentStatus.SUCCESSFUL : PaymentStatus.FAILED,
+            success ? "TXN_" + UUID.randomUUID() : null,
+            success ? "Payment successful" : "Payment failed"
+        );
+    }
+    
+    @Override
+    public boolean supports(PaymentMethod method) {
+        return method == PaymentMethod.CREDIT_CARD;
+    }
+}
+
+@Component
+public class PayPalPaymentStrategy implements PaymentStrategy {
+    
+    @Override
+    public PaymentResult processPayment(PaymentRequest request) {
+        // PayPal processing logic
+        System.out.println("Processing PayPal payment: " + request.getAmount());
+        return new PaymentResult(PaymentStatus.SUCCESSFUL, 
+                               "PP_" + UUID.randomUUID(), "PayPal payment successful");
+    }
+    
+    @Override
+    public boolean supports(PaymentMethod method) {
+        return method == PaymentMethod.PAYPAL;
+    }
+}
+
+// Pricing Strategy
+public interface PricingStrategy {
+    double calculatePrice(Flight flight, Seat seat, Passenger passenger);
+}
+
+@Component
+public class StandardPricingStrategy implements PricingStrategy {
+    
+    @Override
+    public double calculatePrice(Flight flight, Seat seat, Passenger passenger) {
+        double basePrice = flight.getBasePrices().get(seat.getSeatClass());
+        
+        // Apply seasonal pricing, demand-based pricing, etc.
+        return applyDynamicPricing(basePrice, flight.getDepartureTime());
+    }
+    
+    private double applyDynamicPricing(double basePrice, LocalDateTime departureTime) {
+        // Simple dynamic pricing based on days until departure
+        long daysUntilDeparture = ChronoUnit.DAYS.between(LocalDate.now(), departureTime.toLocalDate());
+        
+        if (daysUntilDeparture < 7) {
+            return basePrice * 1.5; // 50% increase for last-minute bookings
+        } else if (daysUntilDeparture > 60) {
+            return basePrice * 0.9; // 10% discount for early bookings
+        }
+        
+        return basePrice;
+    }
+}
+
+@Component
+public class LoyaltyPricingStrategy implements PricingStrategy {
+    
+    @Override
+    public double calculatePrice(Flight flight, Seat seat, Passenger passenger) {
+        double basePrice = flight.getBasePrices().get(seat.getSeatClass());
+        
+        // Apply loyalty discount
+        if (passenger.getLoyaltyAccount() != null) {
+            String tier = passenger.getLoyaltyAccount().getTier();
+            switch (tier) {
+                case "Gold": return basePrice * 0.9; // 10% discount
+                case "Platinum": return basePrice * 0.85; // 15% discount
+            }
+        }
+        
+        return basePrice;
+    }
+}

@@ -1,0 +1,204 @@
+4. Observer Pattern - Notifications & System Updates
+
+
+// Observer Interface
+public interface LibraryObserver {
+    void onBookBorrowed(Book book, Member member, LocalDate dueDate);
+    void onBookReturned(Book book, Member member);
+    void onBookReserved(Book book, Member member);
+    void onBookAvailable(Book book, List<Member> waitingList);
+    void onDueDateApproaching(BorrowRecord record);
+    void onFineIssued(Fine fine);
+    void onNewBookAdded(Book book);
+}
+
+// Concrete Observers
+@Component
+public class EmailNotificationService implements LibraryObserver {
+    
+    @Override
+    public void onBookBorrowed(Book book, Member member, LocalDate dueDate) {
+        String subject = "Book Borrowed - " + book.getTitle();
+        String message = String.format(
+            "Dear %s,\nYou have successfully borrowed '%s'.\nDue Date: %s",
+            member.getName(), book.getTitle(), dueDate
+        );
+        sendEmail(member.getEmail(), subject, message);
+    }
+    
+    @Override
+    public void onBookReturned(Book book, Member member) {
+        String subject = "Book Returned - " + book.getTitle();
+        String message = String.format(
+            "Dear %s,\nYou have successfully returned '%s'.",
+            member.getName(), book.getTitle()
+        );
+        sendEmail(member.getEmail(), subject, message);
+    }
+    
+    @Override
+    public void onBookReserved(Book book, Member member) {
+        String subject = "Book Reserved - " + book.getTitle();
+        String message = String.format(
+            "Dear %s,\nYou have reserved '%s'. We will notify you when it's available.",
+            member.getName(), book.getTitle()
+        );
+        sendEmail(member.getEmail(), subject, message);
+    }
+    
+    @Override
+    public void onBookAvailable(Book book, List<Member> waitingList) {
+        for (Member member : waitingList) {
+            String subject = "Book Available - " + book.getTitle();
+            String message = String.format(
+                "Dear %s,\nThe book '%s' you reserved is now available.",
+                member.getName(), book.getTitle()
+            );
+            sendEmail(member.getEmail(), subject, message);
+        }
+    }
+    
+    @Override
+    public void onDueDateApproaching(BorrowRecord record) {
+        // Send reminder 3 days before due date
+        String subject = "Due Date Reminder";
+        String message = String.format(
+            "Reminder: Book is due on %s. Please return or renew.",
+            record.getDueDate()
+        );
+        // Implementation to get member email
+        // sendEmail(memberEmail, subject, message);
+    }
+    
+    @Override
+    public void onFineIssued(Fine fine) {
+        // Send fine notification
+    }
+    
+    @Override
+    public void onNewBookAdded(Book book) {
+        // Notify members interested in this genre
+    }
+    
+    private void sendEmail(String recipient, String subject, String message) {
+        System.out.println("Sending email to: " + recipient);
+        System.out.println("Subject: " + subject);
+        System.out.println("Message: " + message);
+    }
+}
+
+@Component
+public class InventoryManagementService implements LibraryObserver {
+    private final BookRepository bookRepository;
+    
+    @Autowired
+    public InventoryManagementService(BookRepository bookRepository) {
+        this.bookRepository = bookRepository;
+    }
+    
+    @Override
+    public void onBookBorrowed(Book book, Member member, LocalDate dueDate) {
+        // Update available copies
+        book.setAvailableCopies(book.getAvailableCopies() - 1);
+        if (book.getAvailableCopies() == 0) {
+            book.setStatus(BookStatus.BORROWED);
+        }
+        bookRepository.save(book);
+    }
+    
+    @Override
+    public void onBookReturned(Book book, Member member) {
+        // Update available copies
+        book.setAvailableCopies(book.getAvailableCopies() + 1);
+        if (book.getAvailableCopies() > 0) {
+            book.setStatus(BookStatus.AVAILABLE);
+        }
+        bookRepository.save(book);
+    }
+    
+    @Override
+    public void onBookReserved(Book book, Member member) {
+        // Update reservation count
+    }
+    
+    @Override
+    public void onBookAvailable(Book book, List<Member> waitingList) {
+        // Handle waiting list notifications
+    }
+    
+    // Other methods implementation...
+}
+
+@Component
+public class AnalyticsService implements LibraryObserver {
+    private final AnalyticsRepository analyticsRepository;
+    
+    @Autowired
+    public AnalyticsService(AnalyticsRepository analyticsRepository) {
+        this.analyticsRepository = analyticsRepository;
+    }
+    
+    @Override
+    public void onBookBorrowed(Book book, Member member, LocalDate dueDate) {
+        // Record borrowing statistics
+        analyticsRepository.recordBorrowing(book, member, LocalDateTime.now());
+    }
+    
+    @Override
+    public void onBookReturned(Book book, Member member) {
+        // Record return statistics
+        analyticsRepository.recordReturn(book, member, LocalDateTime.now());
+    }
+    
+    @Override
+    public void onNewBookAdded(Book book) {
+        // Record new acquisition
+        analyticsRepository.recordNewBook(book, LocalDateTime.now());
+    }
+    
+    // Other methods implementation...
+}
+
+
+// Observable Subject
+@Service
+public class LibraryNotifier {
+    private final List<LibraryObserver> observers = new ArrayList<>();
+    
+    @Autowired
+    public LibraryNotifier(List<LibraryObserver> observers) {
+        this.observers.addAll(observers);
+    }
+    
+    public void addObserver(LibraryObserver observer) {
+        observers.add(observer);
+    }
+    
+    public void notifyBookBorrowed(Book book, Member member, LocalDate dueDate) {
+        observers.forEach(observer -> observer.onBookBorrowed(book, member, dueDate));
+    }
+    
+    public void notifyBookReturned(Book book, Member member) {
+        observers.forEach(observer -> observer.onBookReturned(book, member));
+    }
+    
+    public void notifyBookReserved(Book book, Member member) {
+        observers.forEach(observer -> observer.onBookReserved(book, member));
+    }
+    
+    public void notifyBookAvailable(Book book, List<Member> waitingList) {
+        observers.forEach(observer -> observer.onBookAvailable(book, waitingList));
+    }
+    
+    public void notifyDueDateApproaching(BorrowRecord record) {
+        observers.forEach(observer -> observer.onDueDateApproaching(record));
+    }
+    
+    public void notifyFineIssued(Fine fine) {
+        observers.forEach(observer -> observer.onFineIssued(fine));
+    }
+    
+    public void notifyNewBookAdded(Book book) {
+        observers.forEach(observer -> observer.onNewBookAdded(book));
+    }
+}

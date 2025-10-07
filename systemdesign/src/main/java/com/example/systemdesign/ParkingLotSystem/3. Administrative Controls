@@ -1,0 +1,96 @@
+3. Account Management (Factory Pattern)
+java
+
+
+// Account.java
+public abstract class Account {
+    private String userName;
+    private String password;
+    private Person person;
+    private AccountStatus status;
+    
+    public Account(String userName, String password, Person person, AccountStatus status) {
+        this.userName = userName;
+        this.password = password;
+        this.person = person;
+        this.status = status;
+    }
+    
+    public boolean resetPassword() {
+        // Implementation to reset password
+        System.out.println("Password reset for user: " + userName);
+        return true;
+    }
+    
+    // Getters and setters
+    public String getUserName() { return userName; }
+    public void setUserName(String userName) { this.userName = userName; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
+    public Person getPerson() { return person; }
+    public void setPerson(Person person) { this.person = person; }
+    public AccountStatus getStatus() { return status; }
+    public void setStatus(AccountStatus status) { this.status = status; }
+}
+
+// Admin.java
+public class Admin extends Account {
+    public Admin(String userName, String password, Person person, AccountStatus status) {
+        super(userName, password, person, status);
+    }
+    
+    public boolean addParkingFloor(ParkingFloor floor) {
+        // Implementation to add parking floor
+        System.out.println("Adding parking floor: " + floor.getName());
+        return true;
+    }
+    
+    public boolean addParkingSpot(String floorName, ParkingSpot spot) {
+        // Implementation to add parking spot
+        System.out.println("Adding parking spot " + spot.getNumber() + " to floor " + floorName);
+        return true;
+    }
+    
+    public boolean addParkingDisplayBoard(String floorName, ParkingDisplayBoard displayBoard) {
+        // Implementation to add display board
+        System.out.println("Adding display board to floor " + floorName);
+        return true;
+    }
+    
+    public boolean addCustomerInfoPanel(String floorName, CustomerInfoPanel infoPanel) {
+        // Implementation to add info panel
+        System.out.println("Adding customer info panel to floor " + floorName);
+        return true;
+    }
+    
+    public boolean addEntrancePanel(EntrancePanel entrancePanel) {
+        // Implementation to add entrance panel
+        System.out.println("Adding entrance panel");
+        return true;
+    }
+    
+    public boolean addExitPanel(ExitPanel exitPanel) {
+        // Implementation to add exit panel
+        System.out.println("Adding exit panel");
+        return true;
+    }
+}
+
+// ParkingAttendant.java
+public class ParkingAttendant extends Account {
+    public ParkingAttendant(String userName, String password, Person person, AccountStatus status) {
+        super(userName, password, person, status);
+    }
+    
+    public ParkingTicket processTicket(String ticketNumber) {
+        // Implementation to process ticket
+        System.out.println("Processing ticket: " + ticketNumber);
+        return null; // Should return actual ticket
+    }
+    
+    public boolean processPayment(ParkingTicket ticket, PaymentType paymentType) {
+        // Implementation to process payment
+        System.out.println("Processing payment for ticket: " + ticket.getTicketNumber());
+        return true;
+    }
+}

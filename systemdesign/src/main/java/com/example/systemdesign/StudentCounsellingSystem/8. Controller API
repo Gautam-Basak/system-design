@@ -1,0 +1,45 @@
+7. Controller Layer (REST API)
+java
+
+
+@RestController
+@RequestMapping("/api/appointments")
+public class AppointmentController {
+    
+    private final AppointmentService appointmentService;
+    
+    @Autowired
+    public AppointmentController(AppointmentService appointmentService) {
+        this.appointmentService = appointmentService;
+    }
+    
+    @PostMapping
+    public ResponseEntity<AppointmentResponse> bookAppointment(
+            @RequestBody AppointmentRequest request) {
+        try {
+            AppointmentResponse response = appointmentService.bookAppointment(request);
+            return ResponseEntity.ok(response);
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @DeleteMapping("/{appointmentId}")
+    public ResponseEntity<Void> cancelAppointment(
+            @PathVariable String appointmentId,
+            @RequestParam String studentId) {
+        try {
+            appointmentService.cancelAppointment(appointmentId, studentId);
+            return ResponseEntity.ok().build();
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().build();
+        }
+    }
+    
+    @GetMapping("/student/{studentId}")
+    public ResponseEntity<List<AppointmentResponse>> getStudentAppointments(
+            @PathVariable String studentId) {
+        // Implementation...
+        return ResponseEntity.ok(Collections.emptyList());
+    }
+}

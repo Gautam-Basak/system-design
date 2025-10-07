@@ -1,0 +1,150 @@
+2. Factory Pattern - Room Types & Booking Types
+java
+
+// Room Factory
+@Component
+public class RoomFactory {
+    
+    public Room createRoom(RoomType type, String roomNumber, double basePrice) {
+        switch (type) {
+            case STANDARD:
+                return createStandardRoom(roomNumber, basePrice);
+            case DELUXE:
+                return createDeluxeRoom(roomNumber, basePrice);
+            case SUITE:
+                return createSuite(roomNumber, basePrice);
+            case EXECUTIVE_SUITE:
+                return createExecutiveSuite(roomNumber, basePrice);
+            default:
+                throw new IllegalArgumentException("Unknown room type: " + type);
+        }
+    }
+    
+    private Room createStandardRoom(String roomNumber, double basePrice) {
+        Room room = new Room();
+        room.setRoomId(generateRoomId());
+        room.setRoomNumber(roomNumber);
+        room.setRoomType(RoomType.STANDARD);
+        room.setCapacity(2);
+        room.setBasePrice(basePrice);
+        room.setBedTypes(Arrays.asList(BedType.QUEEN));
+        room.setRoomAmenities(Arrays.asList(
+            new Amenity("AMN001", "WiFi", "Free WiFi", 0.0, true),
+            new Amenity("AMN002", "TV", "Flat screen TV", 0.0, true)
+        ));
+        return room;
+    }
+    
+    private Room createDeluxeRoom(String roomNumber, double basePrice) {
+        Room room = new Room();
+        room.setRoomId(generateRoomId());
+        room.setRoomNumber(roomNumber);
+        room.setRoomType(RoomType.DELUXE);
+        room.setCapacity(3);
+        room.setBasePrice(basePrice * 1.3);
+        room.setBedTypes(Arrays.asList(BedType.KING));
+        room.setRoomAmenities(Arrays.asList(
+            new Amenity("AMN001", "WiFi", "Free WiFi", 0.0, true),
+            new Amenity("AMN003", "Minibar", "Stocked minibar", 0.0, false)
+        ));
+        return room;
+    }
+    
+    private Room createSuite(String roomNumber, double basePrice) {
+        Room room = new Room();
+        room.setRoomId(generateRoomId());
+        room.setRoomNumber(roomNumber);
+        room.setRoomType(RoomType.SUITE);
+        room.setCapacity(4);
+        room.setBasePrice(basePrice * 1.8);
+        room.setBedTypes(Arrays.asList(BedType.KING, BedType.SINGLE));
+        room.setRoomAmenities(Arrays.asList(
+            new Amenity("AMN004", "Jacuzzi", "In-room jacuzzi", 0.0, true),
+            new Amenity("AMN005", "Balcony", "Private balcony", 0.0, true)
+        ));
+        return room;
+    }
+    
+    private String generateRoomId() {
+        return "RM_" + UUID.randomUUID().toString().substring(0, 8);
+    }
+}
+
+
+// Booking Factory
+@Component
+public class BookingFactory {
+    
+    public HotelBooking createBooking(BookingType type, BookingRequest request) {
+        switch (type) {
+            case INDIVIDUAL:
+                return createIndividualBooking(request);
+            case GROUP:
+                return createGroupBooking(request);
+            case CORPORATE:
+                return createCorporateBooking(request);
+            case FAMILY:
+                return createFamilyBooking(request);
+            default:
+                throw new IllegalArgumentException("Unknown booking type: " + type);
+        }
+    }
+    
+    private IndividualBooking createIndividualBooking(BookingRequest request) {
+        IndividualBooking booking = new IndividualBooking();
+        initializeCommonFields(booking, request);
+        booking.setBusinessTravel(request.isBusinessTravel());
+        booking.setSpecialRequests(request.getSpecialRequests());
+        return booking;
+    }
+    
+    private GroupBooking createGroupBooking(BookingRequest request) {
+        GroupBooking booking = new GroupBooking();
+        initializeCommonFields(booking, request);
+        booking.setGroupName(request.getGroupName());
+        booking.setGroupSize(request.getGuests().size());
+        booking.setGroupDiscount(calculateGroupDiscount(request.getGuests().size()));
+        return booking;
+    }
+    
+    private CorporateBooking createCorporateBooking(BookingRequest request) {
+        CorporateBooking booking = new CorporateBooking();
+        initializeCommonFields(booking, request);
+        booking.setCorporateAccountId(request.getCorporateAccountId());
+        booking.setCompanyName(request.getCompanyName());
+        booking.setCorporateDiscount(0.15); // 15% corporate discount
+        return booking;
+    }
+    
+    private FamilyBooking createFamilyBooking(BookingRequest request) {
+        FamilyBooking booking = new FamilyBooking();
+        initializeCommonFields(booking, request);
+        booking.setChildrenCount((int) request.getGuests().stream()
+            .filter(g -> ChronoUnit.YEARS.between(g.getDateOfBirth().toInstant()
+                .atZone(ZoneId.systemDefault()).toLocalDate(), LocalDate.now()) < 18)
+            .count());
+        return booking;
+    }
+    
+    private void initializeCommonFields(HotelBooking booking, BookingRequest request) {
+        booking.setBookingId(generateBookingId());
+        booking.setHotelId(request.getHotelId());
+        booking.setGuests(request.getGuests());
+        booking.setRooms(request.getRooms());
+        booking.setCheckInDate(request.getCheckInDate());
+        booking.setCheckOutDate(request.getCheckOutDate());
+        booking.setStatus(BookingStatus.PENDING);
+        booking.setSelectedAmenities(request.getSelectedAmenities());
+    }
+    
+    private double calculateGroupDiscount(int groupSize) {
+        if (groupSize >= 20) return 0.20;
+        if (groupSize >= 10) return 0.15;
+        if (groupSize >= 5) return 0.10;
+        return 0.0;
+    }
+    
+    private String generateBookingId() {
+        return "HTL_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}

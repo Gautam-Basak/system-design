@@ -1,0 +1,69 @@
+8. Main Booking Service Integrating All Patterns
+java
+@Service
+public class HotelBookingService {
+    private final BookingFactory bookingFactory;
+    private final PricingContext pricingContext;
+    private final BookingValidationChain validationChain;
+    private final AmenityDecoratorService amenityDecorator;
+    private final BookingNotifier notifier;
+    private final BookingRepository bookingRepository;
+    
+    @Autowired
+    public HotelBookingService(BookingFactory bookingFactory,
+                             PricingContext pricingContext,
+                             BookingValidationChain validationChain,
+                             AmenityDecoratorService amenityDecorator,
+                             BookingNotifier notifier,
+                             BookingRepository bookingRepository) {
+        this.bookingFactory = bookingFactory;
+        this.pricingContext = pricingContext;
+        this.validationChain = validationChain;
+        this.amenityDecorator = amenityDecorator;
+        this.notifier = notifier;
+        this.bookingRepository = bookingRepository;
+    }
+    
+    public HotelBooking createBooking(BookingRequest request) {
+        // Create base booking using Factory Pattern
+        HotelBooking booking = bookingFactory.createBooking(request.getBookingType(), request);
+        
+        // Add amenities using Decorator Pattern
+        if (request.getAdditionalAmenities() != null) {
+            booking = amenityDecorator.addAmenities(booking, request.getAdditionalAmenities());
+        }
+        
+        // Validate using Chain of Responsibility
+        ValidationResult validation = validationChain.validateBooking(booking);
+        if (!validation.isValid()) {
+            throw new IllegalArgumentException("Booking validation failed: " + validation.getMessage());
+        }
+        
+        // Calculate price using Strategy Pattern
+        double finalPrice = pricingContext.calculateFinalPrice(booking);
+        booking.setTotalAmount(finalPrice);
+        
+        // Save booking
+        HotelBooking savedBooking = bookingRepository.save(booking);
+        
+        // Notify observers using Observer Pattern
+        notifier.notifyBookingCreated(savedBooking);
+        
+        return savedBooking;
+    }
+    
+    public void confirmBooking(String bookingId) {
+        HotelBooking booking = bookingRepository.findById(bookingId)
+            .orElseThrow(() -> new IllegalArgumentException("Booking not found"));
+        
+        booking.setStatus(BookingStatus.CONFIRMED);
+        bookingRepository.save(booking);
+        
+        notifier.notifyBookingConfirmed(booking);
+    }
+    
+    public List<Room> searchAvailableRooms(SearchRequest request) {
+        RoomSearchService searchService = new RoomSearchService(roomRepository);
+        return searchService.searchRooms(request);
+    }
+}

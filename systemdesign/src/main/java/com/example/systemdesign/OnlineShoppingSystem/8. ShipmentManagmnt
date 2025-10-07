@@ -1,0 +1,52 @@
+// ShipmentLog Class
+class ShipmentLog {
+    private String shipmentNumber;
+    private ShipmentStatus status;
+    private LocalDate creationDate;
+    private String description;
+    
+    public ShipmentLog(String shipmentNumber, ShipmentStatus status, String description) {
+        this.shipmentNumber = shipmentNumber;
+        this.status = status;
+        this.description = description;
+        this.creationDate = LocalDate.now();
+    }
+    
+    // Getters
+    public ShipmentStatus getStatus() { return status; }
+    public String getDescription() { return description; }
+}
+
+// Shipment Class
+class Shipment {
+    private String shipmentNumber;
+    private LocalDate shipmentDate;
+    private LocalDate estimatedArrival;
+    private String shipmentMethod;
+    private List<ShipmentLog> shipmentLogs;
+    private Address deliveryAddress;
+    
+    public Shipment(String shipmentNumber, String shipmentMethod, Address deliveryAddress) {
+        this.shipmentNumber = shipmentNumber;
+        this.shipmentMethod = shipmentMethod;
+        this.deliveryAddress = deliveryAddress;
+        this.shipmentDate = LocalDate.now();
+        this.estimatedArrival = LocalDate.now().plusDays(3); // Default 3 days
+        this.shipmentLogs = new ArrayList<>();
+        
+        // Add initial log
+        addShipmentLog(new ShipmentLog(shipmentNumber, ShipmentStatus.PENDING, "Shipment created"));
+    }
+    
+    public void addShipmentLog(ShipmentLog shipmentLog) {
+        shipmentLogs.add(shipmentLog);
+        System.out.println("Shipment log added: " + shipmentLog.getDescription());
+    }
+    
+    public void updateStatus(ShipmentStatus newStatus, String description) {
+        addShipmentLog(new ShipmentLog(shipmentNumber, newStatus, description));
+        System.out.println("Shipment status updated to: " + newStatus);
+    }
+    
+    public String getShipmentNumber() { return shipmentNumber; }
+}
