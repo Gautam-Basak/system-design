@@ -1,0 +1,50 @@
+// =============================================
+// MISSING SERVICE CLASSES
+// =============================================
+
+@Service
+public class FlightSearchService {
+    
+    private final FlightRepository flightRepository;
+    private final PricingStrategy pricingStrategy;
+    
+    @Autowired
+    public FlightSearchService(FlightRepository flightRepository,
+                             PricingStrategy pricingStrategy) {
+        this.flightRepository = flightRepository;
+        this.pricingStrategy = pricingStrategy;
+    }
+    
+    public List<Flight> searchFlights(String departure, String arrival, LocalDate date) {
+        return flightRepository.searchFlights(departure, arrival, date);
+    }
+    
+    public Flight validateFlight(String flightNumber) {
+        return flightRepository.findByNumber(flightNumber)
+            .orElseThrow(() -> new IllegalArgumentException("Flight not found: " + flightNumber));
+    }
+    
+    public List<Seat> getAvailableSeatsWithPrices(String flightNumber, SeatClass seatClass, Passenger passenger) {
+        List<Seat> availableSeats = flightRepository.findAvailableSeats(flightNumber, seatClass);
+        
+        // Apply dynamic pricing for each seat
+        Flight flight = validateFlight(flightNumber);
+        availableSeats.forEach(seat -> {
+            double finalPrice = pricingStrategy.calculatePrice(flight, seat, passenger);
+            seat.setPrice(finalPrice);
+        });
+        
+        return availableSeats;
+    }
+    
+    public boolean isFlightAvailable(String flightNumber) {
+        return flightRepository.findByNumber(flightNumber)
+            .map(flight -> {
+                long availableSeats = flight.getSeats().stream()
+                    .filter(Seat::isAvailable)
+                    .count();
+                return availableSeats > 0;
+            })
+            .orElse(false);
+    }
+}

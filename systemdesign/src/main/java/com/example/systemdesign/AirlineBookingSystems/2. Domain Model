@@ -125,3 +125,45 @@ public class LoyaltyAccount {
     
     // Getters and setters
 }
+
+
+// =============================================
+// SUPPORTING DTO CLASSES (Missing)
+// =============================================
+
+public class BookingRequest {
+    private String flightNumber;
+    private Passenger passenger;
+    private List<String> selectedSeatNumbers;
+    private PaymentMethod paymentMethod;
+    private Map<String, String> paymentDetails;
+    
+    // Constructors, getters, setters
+    public BookingRequest() {}
+    
+    public BookingRequest(String flightNumber, Passenger passenger, 
+                         List<String> selectedSeatNumbers, PaymentMethod paymentMethod,
+                         Map<String, String> paymentDetails) {
+        this.flightNumber = flightNumber;
+        this.passenger = passenger;
+        this.selectedSeatNumbers = selectedSeatNumbers;
+        this.paymentMethod = paymentMethod;
+        this.paymentDetails = paymentDetails;
+    }
+    
+    // Getters and setters
+    public String getFlightNumber() { return flightNumber; }
+    public void setFlightNumber(String flightNumber) { this.flightNumber = flightNumber; }
+    
+    public Passenger getPassenger() { return passenger; }
+    public void setPassenger(Passenger passenger) { this.passenger = passenger; }
+    
+    public List<String> getSelectedSeatNumbers() { return selectedSeatNumbers; }
+    public void setSelectedSeatNumbers(List<String> selectedSeatNumbers) { this.selectedSeatNumbers = selectedSeatNumbers; }
+    
+    public PaymentMethod getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; }
+    
+    public Map<String, String> getPaymentDetails() { return paymentDetails; }
+    public void setPaymentDetails(Map<String, String> paymentDetails) { this.paymentDetails = paymentDetails; }
+}
