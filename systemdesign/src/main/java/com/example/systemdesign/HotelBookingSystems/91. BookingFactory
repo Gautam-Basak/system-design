@@ -1,0 +1,424 @@
+// =============================================
+// MISSING BOOKING CLASSES
+// =============================================
+
+// Base Booking Class
+public abstract class HotelBooking {
+    private String bookingId;
+    private String hotelId;
+    private List<Guest> guests;
+    private List<Room> rooms;
+    private LocalDate checkInDate;
+    private LocalDate checkOutDate;
+    private int numberOfNights;
+    private BookingStatus status;
+    private double totalAmount;
+    private double taxes;
+    private double discount;
+    private double finalAmount;
+    private List<Amenity> selectedAmenities;
+    private Payment payment;
+    private String specialRequests;
+    private LocalDateTime createdDate;
+    private LocalDateTime updatedDate;
+    
+    // Common methods for all booking types
+    public abstract String getDescription();
+    public abstract double calculateCancellationFee();
+    
+    // Getters and setters
+    public String getBookingId() { return bookingId; }
+    public void setBookingId(String bookingId) { this.bookingId = bookingId; }
+    
+    public String getHotelId() { return hotelId; }
+    public void setHotelId(String hotelId) { this.hotelId = hotelId; }
+    
+    public List<Guest> getGuests() { return guests; }
+    public void setGuests(List<Guest> guests) { this.guests = guests; }
+    
+    public List<Room> getRooms() { return rooms; }
+    public void setRooms(List<Room> rooms) { this.rooms = rooms; }
+    
+    public LocalDate getCheckInDate() { return checkInDate; }
+    public void setCheckInDate(LocalDate checkInDate) { this.checkInDate = checkInDate; }
+    
+    public LocalDate getCheckOutDate() { return checkOutDate; }
+    public void setCheckOutDate(LocalDate checkOutDate) { this.checkOutDate = checkOutDate; }
+    
+    public int getNumberOfNights() { return numberOfNights; }
+    public void setNumberOfNights(int numberOfNights) { this.numberOfNights = numberOfNights; }
+    
+    public BookingStatus getStatus() { return status; }
+    public void setStatus(BookingStatus status) { this.status = status; }
+    
+    public double getTotalAmount() { return totalAmount; }
+    public void setTotalAmount(double totalAmount) { this.totalAmount = totalAmount; }
+    
+    public double getTaxes() { return taxes; }
+    public void setTaxes(double taxes) { this.taxes = taxes; }
+    
+    public double getDiscount() { return discount; }
+    public void setDiscount(double discount) { this.discount = discount; }
+    
+    public double getFinalAmount() { return finalAmount; }
+    public void setFinalAmount(double finalAmount) { this.finalAmount = finalAmount; }
+    
+    public List<Amenity> getSelectedAmenities() { return selectedAmenities; }
+    public void setSelectedAmenities(List<Amenity> selectedAmenities) { this.selectedAmenities = selectedAmenities; }
+    
+    public Payment getPayment() { return payment; }
+    public void setPayment(Payment payment) { this.payment = payment; }
+    
+    public String getSpecialRequests() { return specialRequests; }
+    public void setSpecialRequests(String specialRequests) { this.specialRequests = specialRequests; }
+    
+    public LocalDateTime getCreatedDate() { return createdDate; }
+    public void setCreatedDate(LocalDateTime createdDate) { this.createdDate = createdDate; }
+    
+    public LocalDateTime getUpdatedDate() { return updatedDate; }
+    public void setUpdatedDate(LocalDateTime updatedDate) { this.updatedDate = updatedDate; }
+}
+
+
+
+
+// Individual Booking Type
+public class IndividualBooking extends HotelBooking {
+    private boolean businessTravel;
+    private boolean smoker;
+    private String specialRequests;
+    
+    @Override
+    public String getDescription() {
+        return String.format("Individual Booking - %s room(s) for %s guest(s)", 
+            getRooms().size(), getGuests().size());
+    }
+    
+    @Override
+    public double calculateCancellationFee() {
+        long daysUntilCheckIn = ChronoUnit.DAYS.between(LocalDate.now(), getCheckInDate());
+        if (daysUntilCheckIn > 7) {
+            return 0.0; // Free cancellation
+        } else if (daysUntilCheckIn > 2) {
+            return getTotalAmount() * 0.1; // 10% fee
+        } else {
+            return getTotalAmount() * 0.5; // 50% fee
+        }
+    }
+    
+    // Getters and setters
+    public boolean isBusinessTravel() { return businessTravel; }
+    public void setBusinessTravel(boolean businessTravel) { this.businessTravel = businessTravel; }
+    
+    public boolean isSmoker() { return smoker; }
+    public void setSmoker(boolean smoker) { this.smoker = smoker; }
+    
+    public String getSpecialRequests() { return specialRequests; }
+    public void setSpecialRequests(String specialRequests) { this.specialRequests = specialRequests; }
+}
+
+
+// Group Booking Type
+public class GroupBooking extends HotelBooking {
+    private String groupName;
+    private int groupSize;
+    private double groupDiscount;
+    private String groupContactPerson;
+    private String groupContactEmail;
+    
+    @Override
+    public String getDescription() {
+        return String.format("Group Booking - %s (%d people)", groupName, groupSize);
+    }
+    
+    @Override
+    public double calculateCancellationFee() {
+        long daysUntilCheckIn = ChronoUnit.DAYS.between(LocalDate.now(), getCheckInDate());
+        if (daysUntilCheckIn > 30) {
+            return 0.0; // Free cancellation
+        } else if (daysUntilCheckIn > 14) {
+            return getTotalAmount() * 0.2; // 20% fee
+        } else {
+            return getTotalAmount() * 0.8; // 80% fee
+        }
+    }
+    
+    // Getters and setters
+    public String getGroupName() { return groupName; }
+    public void setGroupName(String groupName) { this.groupName = groupName; }
+    
+    public int getGroupSize() { return groupSize; }
+    public void setGroupSize(int groupSize) { this.groupSize = groupSize; }
+    
+    public double getGroupDiscount() { return groupDiscount; }
+    public void setGroupDiscount(double groupDiscount) { this.groupDiscount = groupDiscount; }
+    
+    public String getGroupContactPerson() { return groupContactPerson; }
+    public void setGroupContactPerson(String groupContactPerson) { this.groupContactPerson = groupContactPerson; }
+    
+    public String getGroupContactEmail() { return groupContactEmail; }
+    public void setGroupContactEmail(String groupContactEmail) { this.groupContactEmail = groupContactEmail; }
+}
+
+
+// Corporate Booking Type
+public class CorporateBooking extends HotelBooking {
+    private String corporateAccountId;
+    private String companyName;
+    private double corporateDiscount;
+    private String costCenter;
+    private String projectCode;
+    
+    @Override
+    public String getDescription() {
+        return String.format("Corporate Booking - %s", companyName);
+    }
+    
+    @Override
+    public double calculateCancellationFee() {
+        // Corporate bookings often have flexible cancellation
+        long daysUntilCheckIn = ChronoUnit.DAYS.between(LocalDate.now(), getCheckInDate());
+        if (daysUntilCheckIn > 2) {
+            return 0.0; // Free cancellation
+        } else {
+            return getTotalAmount() * 0.1; // 10% fee
+        }
+    }
+    
+    // Getters and setters
+    public String getCorporateAccountId() { return corporateAccountId; }
+    public void setCorporateAccountId(String corporateAccountId) { this.corporateAccountId = corporateAccountId; }
+    
+    public String getCompanyName() { return companyName; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
+    
+    public double getCorporateDiscount() { return corporateDiscount; }
+    public void setCorporateDiscount(double corporateDiscount) { this.corporateDiscount = corporateDiscount; }
+    
+    public String getCostCenter() { return costCenter; }
+    public void setCostCenter(String costCenter) { this.costCenter = costCenter; }
+    
+    public String getProjectCode() { return projectCode; }
+    public void setProjectCode(String projectCode) { this.projectCode = projectCode; }
+}
+
+
+// Family Booking Type
+public class FamilyBooking extends HotelBooking {
+    private int childrenCount;
+    private boolean requiresCrib;
+    private boolean requiresHighChair;
+    private List<String> childAges;
+    
+    @Override
+    public String getDescription() {
+        return String.format("Family Booking - %d adults, %d children", 
+            getGuests().size() - childrenCount, childrenCount);
+    }
+    
+    @Override
+    public double calculateCancellationFee() {
+        long daysUntilCheckIn = ChronoUnit.DAYS.between(LocalDate.now(), getCheckInDate());
+        if (daysUntilCheckIn > 14) {
+            return 0.0; // Free cancellation
+        } else if (daysUntilCheckIn > 7) {
+            return getTotalAmount() * 0.1; // 10% fee
+        } else {
+            return getTotalAmount() * 0.3; // 30% fee
+        }
+    }
+    
+    // Getters and setters
+    public int getChildrenCount() { return childrenCount; }
+    public void setChildrenCount(int childrenCount) { this.childrenCount = childrenCount; }
+    
+    public boolean isRequiresCrib() { return requiresCrib; }
+    public void setRequiresCrib(boolean requiresCrib) { this.requiresCrib = requiresCrib; }
+    
+    public boolean isRequiresHighChair() { return requiresHighChair; }
+    public void setRequiresHighChair(boolean requiresHighChair) { this.requiresHighChair = requiresHighChair; }
+    
+    public List<String> getChildAges() { return childAges; }
+    public void setChildAges(List<String> childAges) { this.childAges = childAges; }
+}
+
+
+
+// =============================================
+// UPDATED BOOKING FACTORY
+// =============================================
+@Component
+public class BookingFactory {
+    
+    public HotelBooking createBooking(BookingType type, BookingRequest request) {
+        switch (type) {
+            case INDIVIDUAL:
+                return createIndividualBooking(request);
+            case GROUP:
+                return createGroupBooking(request);
+            case CORPORATE:
+                return createCorporateBooking(request);
+            case FAMILY:
+                return createFamilyBooking(request);
+            default:
+                throw new IllegalArgumentException("Unknown booking type: " + type);
+        }
+    }
+    
+    private IndividualBooking createIndividualBooking(BookingRequest request) {
+        IndividualBooking booking = new IndividualBooking();
+        initializeCommonFields(booking, request);
+        booking.setBusinessTravel(request.isBusinessTravel());
+        booking.setSpecialRequests(request.getSpecialRequests());
+        return booking;
+    }
+    
+    private GroupBooking createGroupBooking(BookingRequest request) {
+        GroupBooking booking = new GroupBooking();
+        initializeCommonFields(booking, request);
+        booking.setGroupName(request.getGroupName());
+        booking.setGroupSize(request.getGuests().size());
+        booking.setGroupDiscount(calculateGroupDiscount(request.getGuests().size()));
+        booking.setGroupContactPerson(request.getGuests().get(0).getName());
+        booking.setGroupContactEmail(request.getGuests().get(0).getEmail());
+        return booking;
+    }
+    
+    private CorporateBooking createCorporateBooking(BookingRequest request) {
+        CorporateBooking booking = new CorporateBooking();
+        initializeCommonFields(booking, request);
+        booking.setCorporateAccountId(request.getCorporateAccountId());
+        booking.setCompanyName(request.getCompanyName());
+        booking.setCorporateDiscount(0.15); // 15% corporate discount
+        booking.setCostCenter(request.getCostCenter());
+        booking.setProjectCode(request.getProjectCode());
+        return booking;
+    }
+    
+    private FamilyBooking createFamilyBooking(BookingRequest request) {
+        FamilyBooking booking = new FamilyBooking();
+        initializeCommonFields(booking, request);
+        
+        // Calculate children count
+        long childrenCount = request.getGuests().stream()
+            .filter(g -> {
+                if (g.getDateOfBirth() == null) return false;
+                LocalDate birthDate = g.getDateOfBirth().toInstant()
+                    .atZone(ZoneId.systemDefault()).toLocalDate();
+                return ChronoUnit.YEARS.between(birthDate, LocalDate.now()) < 18;
+            })
+            .count();
+        
+        booking.setChildrenCount((int) childrenCount);
+        booking.setRequiresCrib(request.isRequiresCrib());
+        booking.setRequiresHighChair(request.isRequiresHighChair());
+        return booking;
+    }
+    
+    private void initializeCommonFields(HotelBooking booking, BookingRequest request) {
+        booking.setBookingId(generateBookingId());
+        booking.setHotelId(request.getHotelId());
+        booking.setGuests(request.getGuests());
+        booking.setRooms(request.getRooms());
+        booking.setCheckInDate(request.getCheckInDate());
+        booking.setCheckOutDate(request.getCheckOutDate());
+        booking.setStatus(BookingStatus.PENDING);
+        booking.setSelectedAmenities(request.getSelectedAmenities());
+        booking.setSpecialRequests(request.getSpecialRequests());
+        booking.setCreatedDate(LocalDateTime.now());
+        booking.setUpdatedDate(LocalDateTime.now());
+        
+        // Calculate number of nights
+        long nights = ChronoUnit.DAYS.between(request.getCheckInDate(), request.getCheckOutDate());
+        booking.setNumberOfNights((int) nights);
+    }
+    
+    private double calculateGroupDiscount(int groupSize) {
+        if (groupSize >= 20) return 0.20;
+        if (groupSize >= 10) return 0.15;
+        if (groupSize >= 5) return 0.10;
+        return 0.0;
+    }
+    
+    private String generateBookingId() {
+        return "HTL_" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
+    }
+}
+
+
+
+// =============================================
+// UPDATED BOOKING REQUEST WITH MISSING FIELDS
+// =============================================
+public class BookingRequest {
+    private BookingType bookingType;
+    private String hotelId;
+    private List<Guest> guests;
+    private List<Room> rooms;
+    private LocalDate checkInDate;
+    private LocalDate checkOutDate;
+    private List<String> additionalAmenities;
+    private String specialRequests;
+    
+    // For specific booking types
+    private boolean businessTravel;
+    private String groupName;
+    private String corporateAccountId;
+    private String companyName;
+    private String costCenter;
+    private String projectCode;
+    private boolean requiresCrib;
+    private boolean requiresHighChair;
+    
+    // Constructors, getters, setters
+    public BookingRequest() {}
+    
+    // Getters and setters for all fields
+    public BookingType getBookingType() { return bookingType; }
+    public void setBookingType(BookingType bookingType) { this.bookingType = bookingType; }
+    
+    public String getHotelId() { return hotelId; }
+    public void setHotelId(String hotelId) { this.hotelId = hotelId; }
+    
+    public List<Guest> getGuests() { return guests; }
+    public void setGuests(List<Guest> guests) { this.guests = guests; }
+    
+    public List<Room> getRooms() { return rooms; }
+    public void setRooms(List<Room> rooms) { this.rooms = rooms; }
+    
+    public LocalDate getCheckInDate() { return checkInDate; }
+    public void setCheckInDate(LocalDate checkInDate) { this.checkInDate = checkInDate; }
+    
+    public LocalDate getCheckOutDate() { return checkOutDate; }
+    public void setCheckOutDate(LocalDate checkOutDate) { this.checkOutDate = checkOutDate; }
+    
+    public List<String> getAdditionalAmenities() { return additionalAmenities; }
+    public void setAdditionalAmenities(List<String> additionalAmenities) { this.additionalAmenities = additionalAmenities; }
+    
+    public String getSpecialRequests() { return specialRequests; }
+    public void setSpecialRequests(String specialRequests) { this.specialRequests = specialRequests; }
+    
+    public boolean isBusinessTravel() { return businessTravel; }
+    public void setBusinessTravel(boolean businessTravel) { this.businessTravel = businessTravel; }
+    
+    public String getGroupName() { return groupName; }
+    public void setGroupName(String groupName) { this.groupName = groupName; }
+    
+    public String getCorporateAccountId() { return corporateAccountId; }
+    public void setCorporateAccountId(String corporateAccountId) { this.corporateAccountId = corporateAccountId; }
+    
+    public String getCompanyName() { return companyName; }
+    public void setCompanyName(String companyName) { this.companyName = companyName; }
+    
+    public String getCostCenter() { return costCenter; }
+    public void setCostCenter(String costCenter) { this.costCenter = costCenter; }
+    
+    public String getProjectCode() { return projectCode; }
+    public void setProjectCode(String projectCode) { this.projectCode = projectCode; }
+    
+    public boolean isRequiresCrib() { return requiresCrib; }
+    public void setRequiresCrib(boolean requiresCrib) { this.requiresCrib = requiresCrib; }
+    
+    public boolean isRequiresHighChair() { return requiresHighChair; }
+    public void setRequiresHighChair(boolean requiresHighChair) { this.requiresHighChair = requiresHighChair; }
+}

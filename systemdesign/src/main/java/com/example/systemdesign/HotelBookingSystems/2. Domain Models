@@ -18,6 +18,10 @@ public enum AmenityType {
     POOL, SPA, GYM, BREAKFAST, WIFI, PARKING, ROOM_SERVICE
 }
 
+public enum BookingType {
+    INDIVIDUAL, GROUP, CORPORATE, FAMILY
+}
+
 // Domain Entities
 public class Hotel {
     private String hotelId;
