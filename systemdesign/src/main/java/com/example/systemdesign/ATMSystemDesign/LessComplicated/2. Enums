@@ -1,0 +1,15 @@
+// =============================================
+// FUNCTIONALITY: Core Enums for System States
+// =============================================
+
+enum TransactionType {
+    BALANCE_INQUIRY, WITHDRAWAL, DEPOSIT, TRANSFER
+}
+
+enum TransactionStatus {
+    SUCCESS, FAILED, INSUFFICIENT_FUNDS, INVALID_AMOUNT
+}
+
+enum AccountType {
+    SAVINGS, CURRENT
+}

@@ -1,0 +1,90 @@
+// =============================================
+// FUNCTIONALITY: Customer and Account Management
+// =============================================
+
+class Customer {
+    private String customerId;
+    private String name;
+    private Card card;
+    private List<Account> accounts;
+    
+    public Customer(String customerId, String name, Card card) {
+        this.customerId = customerId;
+        this.name = name;
+        this.card = card;
+        this.accounts = new ArrayList<>();
+    }
+    
+    public void addAccount(Account account) {
+        accounts.add(account);
+    }
+    
+    public Account getPrimaryAccount() {
+        return accounts.isEmpty() ? null : accounts.get(0);
+    }
+    
+    // Getters
+    public String getCustomerId() { return customerId; }
+    public String getName() { return name; }
+    public Card getCard() { return card; }
+    public List<Account> getAccounts() { return accounts; }
+}
+
+class Account {
+    private String accountNumber;
+    private AccountType accountType;
+    private double balance;
+    private String customerId;
+    
+    public Account(String accountNumber, AccountType accountType, double initialBalance, String customerId) {
+        this.accountNumber = accountNumber;
+        this.accountType = accountType;
+        this.balance = initialBalance;
+        this.customerId = customerId;
+    }
+    
+    public boolean withdraw(double amount) {
+        if(amount > 0 && amount <= balance) {
+            balance -= amount;
+            return true;
+        }
+        return false;
+    }
+    
+    public boolean deposit(double amount) {
+        if(amount > 0) {
+            balance += amount;
+            return true;
+        }
+        return false;
+    }
+    
+    // Getters
+    public String getAccountNumber() { return accountNumber; }
+    public double getBalance() { return balance; }
+    public AccountType getAccountType() { return accountType; }
+}
+
+class Card {
+    private String cardNumber;
+    private String pin;
+    private LocalDate expiryDate;
+    private boolean active;
+    
+    public Card(String cardNumber, String pin, LocalDate expiryDate) {
+        this.cardNumber = cardNumber;
+        this.pin = pin;
+        this.expiryDate = expiryDate;
+        this.active = true;
+    }
+    
+    public boolean validatePin(String inputPin) {
+        return this.pin.equals(inputPin) && active && !isExpired();
+    }
+    
+    private boolean isExpired() {
+        return expiryDate.isBefore(LocalDate.now());
+    }
+    
+    public String getCardNumber() { return cardNumber; }
+}

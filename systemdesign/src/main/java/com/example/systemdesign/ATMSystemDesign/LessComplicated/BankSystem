@@ -1,0 +1,40 @@
+// =============================================
+// BANK SYSTEM
+// =============================================
+class BankSystem {
+    private CustomerRepository customerRepository;
+    private AccountRepository accountRepository;
+    private TransactionRepository transactionRepository;
+    
+    public BankSystem() {
+        this.customerRepository = new InMemoryCustomerRepository();
+        this.accountRepository = new InMemoryAccountRepository();
+        this.transactionRepository = new InMemoryTransactionRepository();
+        setupSampleData();
+    }
+    
+    private void setupSampleData() {
+        ((InMemoryCustomerRepository) customerRepository).initializeSampleData();
+        
+        for(Customer customer : getAllCustomers()) {
+            for(Account account : customer.getAccounts()) {
+                accountRepository.saveAccount(account);
+            }
+        }
+    }
+    
+    private List<Customer> getAllCustomers() {
+        // For demo purposes - in real system, repository would provide this
+        return List.of(
+            new Customer("CUST001", "John Doe", new Card("1234567890123456", "1234", LocalDate.now().plusYears(2))),
+            new Customer("CUST002", "Jane Smith", new Card("9876543210987654", "5678", LocalDate.now().plusYears(1)))
+        );
+    }
+    
+    public ATM createATM(String atmId, String location) {
+        AuthenticationService authService = new AuthenticationService(customerRepository);
+        TransactionService transactionService = new TransactionService(transactionRepository, accountRepository);
+        
+        return new ATM(atmId, location, authService, transactionService, accountRepository);
+    }
+}

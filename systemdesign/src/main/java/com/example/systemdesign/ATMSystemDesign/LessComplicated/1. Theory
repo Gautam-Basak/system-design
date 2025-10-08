@@ -1,0 +1,23 @@
+Functionalities Covered:
+
+User Authentication
+
+Balance Inquiry
+
+Cash Withdrawal
+
+Cash Deposit
+
+Fund Transfer
+
+Transaction History
+
+
+
+Design Patterns Used:
+
+Factory Pattern (Transaction creation)
+
+Strategy Pattern (Transaction processing)
+
+Singleton Pattern (Services)

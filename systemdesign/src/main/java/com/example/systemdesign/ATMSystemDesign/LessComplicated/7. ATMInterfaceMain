@@ -1,0 +1,138 @@
+// =============================================
+// FUNCTIONALITY: ATM Interface (Facade Pattern)
+// =============================================
+// =============================================
+// ATM
+// =============================================
+
+class ATM {
+    private String atmId;
+    private String location;
+    private Customer currentCustomer;
+    private AuthenticationService authService;
+    private TransactionService transactionService;
+    private AccountRepository accountRepository;
+    
+    public ATM(String atmId, String location, 
+               AuthenticationService authService,
+               TransactionService transactionService,
+               AccountRepository accountRepository) {
+        this.atmId = atmId;
+        this.location = location;
+        this.authService = authService;
+        this.transactionService = transactionService;
+        this.accountRepository = accountRepository;
+    }
+    
+    public boolean login(String cardNumber, String pin) {
+        currentCustomer = authService.authenticate(cardNumber, pin);
+        if (currentCustomer != null) {
+            System.out.println("Welcome " + currentCustomer.getName());
+            return true;
+        } else {
+            System.out.println("Invalid card or PIN");
+            return false;
+        }
+    }
+    
+    public void logout() {
+        if (currentCustomer != null) {
+            System.out.println("Goodbye " + currentCustomer.getName());
+        }
+        currentCustomer = null;
+    }
+    
+    public void checkBalance() {
+        if(currentCustomer == null) {
+            System.out.println("Please login first.");
+            return;
+        }
+        
+        Account account = currentCustomer.getPrimaryAccount();
+        BalanceInquiryTransaction transaction = new BalanceInquiryTransaction(account.getAccountNumber());
+        TransactionStatus status = transactionService.processTransaction(transaction);
+        
+        if(status == TransactionStatus.SUCCESS) {
+            System.out.println("Available Balance: $" + account.getBalance());
+        } else {
+            System.out.println("Balance inquiry failed.");
+        }
+    }
+    
+    public void withdraw(double amount) {
+        if(currentCustomer == null) {
+            System.out.println("Please login first.");
+            return;
+        }
+        
+        Account account = currentCustomer.getPrimaryAccount();
+        WithdrawalTransaction transaction = new WithdrawalTransaction(account.getAccountNumber(), amount);
+        TransactionStatus status = transactionService.processTransaction(transaction);
+        
+        if(status == TransactionStatus.SUCCESS) {
+            System.out.println("Withdrawal successful. Amount: $" + amount);
+            Account updatedAccount = accountRepository.findAccount(account.getAccountNumber());
+            System.out.println("Remaining Balance: $" + updatedAccount.getBalance());
+        } else {
+            System.out.println("Withdrawal failed: " + status);
+        }
+    }
+    
+    public void deposit(double amount) {
+        if(currentCustomer == null) {
+            System.out.println("Please login first.");
+            return;
+        }
+        
+        Account account = currentCustomer.getPrimaryAccount();
+        DepositTransaction transaction = new DepositTransaction(account.getAccountNumber(), amount);
+        TransactionStatus status = transactionService.processTransaction(transaction);
+        
+        if(status == TransactionStatus.SUCCESS) {
+            System.out.println("Deposit successful. Amount: $" + amount);
+            Account updatedAccount = accountRepository.findAccount(account.getAccountNumber());
+            System.out.println("New Balance: $" + updatedAccount.getBalance());
+        } else {
+            System.out.println("Deposit failed: " + status);
+        }
+    }
+    
+    public void transfer(String toAccountNumber, double amount) {
+        if(currentCustomer == null) {
+            System.out.println("Please login first.");
+            return;
+        }
+        
+        Account fromAccount = currentCustomer.getPrimaryAccount();
+        TransferTransaction transaction = new TransferTransaction(fromAccount.getAccountNumber(), toAccountNumber, amount);
+        TransactionStatus status = transactionService.processTransaction(transaction);
+        
+        if(status == TransactionStatus.SUCCESS) {
+            System.out.println("Transfer successful. Amount: $" + amount + " to account: " + toAccountNumber);
+            Account updatedAccount = accountRepository.findAccount(fromAccount.getAccountNumber());
+            System.out.println("Remaining Balance: $" + updatedAccount.getBalance());
+        } else {
+            System.out.println("Transfer failed: " + status);
+        }
+    }
+    
+    public void showTransactionHistory() {
+        if(currentCustomer == null) {
+            System.out.println("Please login first.");
+            return;
+        }
+        
+        Account account = currentCustomer.getPrimaryAccount();
+        List<Transaction> transactions = transactionService.getTransactionHistory(account.getAccountNumber());
+        
+        System.out.println("\n=== Transaction History ===");
+        for(Transaction t : transactions) {
+            System.out.println(t.getTimestamp() + " - " + t.getType() + " - $" + t.getAmount() + " - " + t.getStatus());
+        }
+        System.out.println("===========================");
+    }
+    
+    public Customer getCurrentCustomer() {
+        return currentCustomer;
+    }
+}

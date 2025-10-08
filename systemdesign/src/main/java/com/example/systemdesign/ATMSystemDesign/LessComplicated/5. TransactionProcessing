@@ -1,0 +1,138 @@
+// =============================================
+// FUNCTIONALITY: Transaction Processing (Strategy Pattern)
+// =============================================
+
+// =============================================
+// TRANSACTIONS
+// =============================================
+abstract class Transaction {
+    protected String transactionId;
+    protected LocalDateTime timestamp;
+    protected double amount;
+    protected TransactionStatus status;
+    protected String accountNumber;
+    protected TransactionType type;
+    
+    public Transaction(String accountNumber, double amount, TransactionType type) {
+        this.transactionId = "TXN" + System.currentTimeMillis();
+        this.timestamp = LocalDateTime.now();
+        this.accountNumber = accountNumber;
+        this.amount = amount;
+        this.type = type;
+        this.status = TransactionStatus.PENDING;
+    }
+    
+    public abstract TransactionStatus process(AccountRepository accountRepository);
+    
+    public String getTransactionId() { return transactionId; }
+    public TransactionType getType() { return type; }
+    public double getAmount() { return amount; }
+    public TransactionStatus getStatus() { return status; }
+    public LocalDateTime getTimestamp() { return timestamp; }
+    public String getAccountNumber() { return accountNumber; }
+}
+
+
+
+class WithdrawalTransaction extends Transaction {
+    public WithdrawalTransaction(String accountNumber, double amount) {
+        super(accountNumber, amount, TransactionType.WITHDRAWAL);
+    }
+    
+    @Override
+    public TransactionStatus process(AccountRepository accountRepository) {
+        Account account = accountRepository.findAccount(accountNumber);
+        
+        if(account == null) {
+            status = TransactionStatus.FAILED;
+        } else if(amount <= 0) {
+            status = TransactionStatus.INVALID_AMOUNT;
+        } else if(account.withdraw(amount)) {
+            accountRepository.saveAccount(account);
+            status = TransactionStatus.SUCCESS;
+        } else {
+            status = TransactionStatus.INSUFFICIENT_FUNDS;
+        }
+        
+        return status;
+    }
+}
+
+
+
+class DepositTransaction extends Transaction {
+    public DepositTransaction(String accountNumber, double amount) {
+        super(accountNumber, amount, TransactionType.DEPOSIT);
+    }
+    
+    @Override
+    public TransactionStatus process(AccountRepository accountRepository) {
+        Account account = accountRepository.findAccount(accountNumber);
+        
+        if(account == null) {
+            status = TransactionStatus.FAILED;
+        } else if(amount <= 0) {
+            status = TransactionStatus.INVALID_AMOUNT;
+        } else if(account.deposit(amount)) {
+            accountRepository.saveAccount(account);
+            status = TransactionStatus.SUCCESS;
+        } else {
+            status = TransactionStatus.FAILED;
+        }
+        
+        return status;
+    }
+}
+
+
+class BalanceInquiryTransaction extends Transaction {
+    public BalanceInquiryTransaction(String accountNumber) {
+        super(accountNumber, 0, TransactionType.BALANCE_INQUIRY);
+    }
+    
+    @Override
+    public TransactionStatus process(AccountRepository accountRepository) {
+        Account account = accountRepository.findAccount(accountNumber);
+        
+        if(account == null) {
+            status = TransactionStatus.FAILED;
+        } else {
+            status = TransactionStatus.SUCCESS;
+        }
+        
+        return status;
+    }
+}
+
+
+class TransferTransaction extends Transaction {
+    private String toAccountNumber;
+    
+    public TransferTransaction(String fromAccountNumber, String toAccountNumber, double amount) {
+        super(fromAccountNumber, amount, TransactionType.TRANSFER);
+        this.toAccountNumber = toAccountNumber;
+    }
+    
+    @Override
+    public TransactionStatus process(AccountRepository accountRepository) {
+        Account fromAccount = accountRepository.findAccount(accountNumber);
+        Account toAccount = accountRepository.findAccount(toAccountNumber);
+        
+        if(fromAccount == null || toAccount == null) {
+            status = TransactionStatus.FAILED;
+        } else if(amount <= 0) {
+            status = TransactionStatus.INVALID_AMOUNT;
+        } else if(fromAccount.withdraw(amount)) {
+            toAccount.deposit(amount);
+            accountRepository.saveAccount(fromAccount);
+            accountRepository.saveAccount(toAccount);
+            status = TransactionStatus.SUCCESS;
+        } else {
+            status = TransactionStatus.INSUFFICIENT_FUNDS;
+        }
+        
+        return status;
+    }
+    
+    public String getToAccountNumber() { return toAccountNumber; }
+}

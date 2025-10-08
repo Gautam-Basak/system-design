@@ -1,0 +1,42 @@
+// =============================================
+// SERVICES
+// =============================================
+
+class AuthenticationService {
+    private CustomerRepository customerRepository;
+    
+    public AuthenticationService(CustomerRepository customerRepository) {
+        this.customerRepository = customerRepository;
+    }
+    
+    public Customer authenticate(String cardNumber, String pin) {
+        Customer customer = customerRepository.findCustomerByCard(cardNumber);
+        if (customer != null && customer.getCard().validatePin(pin)) {
+            return customer;
+        }
+        return null;
+    }
+}
+
+
+
+class TransactionService {
+    private TransactionRepository transactionRepository;
+    private AccountRepository accountRepository;
+    
+    public TransactionService(TransactionRepository transactionRepository, 
+                             AccountRepository accountRepository) {
+        this.transactionRepository = transactionRepository;
+        this.accountRepository = accountRepository;
+    }
+    
+    public TransactionStatus processTransaction(Transaction transaction) {
+        TransactionStatus status = transaction.process(accountRepository);
+        transactionRepository.saveTransaction(transaction);
+        return status;
+    }
+    
+    public List<Transaction> getTransactionHistory(String accountNumber) {
+        return transactionRepository.findTransactionsByAccount(accountNumber);
+    }
+}

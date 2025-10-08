@@ -1,0 +1,76 @@
+// =============================================
+// REPOSITORIES
+// =============================================
+interface CustomerRepository {
+    Customer findCustomerByCard(String cardNumber);
+    void saveCustomer(Customer customer);
+}
+
+interface AccountRepository {
+    Account findAccount(String accountNumber);
+    void saveAccount(Account account);
+}
+
+interface TransactionRepository {
+    void saveTransaction(Transaction transaction);
+    List<Transaction> findTransactionsByAccount(String accountNumber);
+}
+
+
+
+class InMemoryCustomerRepository implements CustomerRepository {
+    private Map<String, Customer> customers = new HashMap<>();
+    
+    public Customer findCustomerByCard(String cardNumber) {
+        return customers.values().stream()
+                .filter(customer -> customer.getCard().getCardNumber().equals(cardNumber))
+                .findFirst()
+                .orElse(null);
+    }
+    
+    public void saveCustomer(Customer customer) {
+        customers.put(customer.getCustomerId(), customer);
+    }
+    
+    public void initializeSampleData() {
+        Card card1 = new Card("1234567890123456", "1234", LocalDate.now().plusYears(2));
+        Customer customer1 = new Customer("CUST001", "John Doe", card1);
+        customer1.addAccount(new Account("ACC001", AccountType.SAVINGS, 5000.0, "CUST001"));
+        saveCustomer(customer1);
+        
+        Card card2 = new Card("9876543210987654", "5678", LocalDate.now().plusYears(1));
+        Customer customer2 = new Customer("CUST002", "Jane Smith", card2);
+        customer2.addAccount(new Account("ACC002", AccountType.CURRENT, 3000.0, "CUST002"));
+        saveCustomer(customer2);
+    }
+}
+
+
+
+class InMemoryAccountRepository implements AccountRepository {
+    private Map<String, Account> accounts = new HashMap<>();
+    
+    public Account findAccount(String accountNumber) {
+        return accounts.get(accountNumber);
+    }
+    
+    public void saveAccount(Account account) {
+        accounts.put(account.getAccountNumber(), account);
+    }
+}
+
+
+
+class InMemoryTransactionRepository implements TransactionRepository {
+    private List<Transaction> transactions = new ArrayList<>();
+    
+    public void saveTransaction(Transaction transaction) {
+        transactions.add(transaction);
+    }
+    
+    public List<Transaction> findTransactionsByAccount(String accountNumber) {
+        return transactions.stream()
+                .filter(t -> t.getAccountNumber().equals(accountNumber))
+                .collect(Collectors.toList());
+    }
+}

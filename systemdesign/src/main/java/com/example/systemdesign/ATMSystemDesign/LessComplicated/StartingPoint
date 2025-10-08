@@ -1,0 +1,14 @@
+// =============================================
+// MAIN APPLICATION
+// =============================================
+public class ATMSystem {
+    public static void main(String[] args) {
+        BankSystem bankSystem = new BankSystem();
+        
+        ATM atm1 = bankSystem.createATM("ATM001", "Downtown Branch");
+        ATM atm2 = bankSystem.createATM("ATM002", "Mall Branch");
+        
+        System.out.println("=== ATM 1 Demo ===");
+        demoATM(atm1);
+        
+        System.out.println("\n=== ATM 2 Demo ==
