@@ -1,0 +1,89 @@
+public class RoomSetupRequest {
+    private RoomType roomType;
+    private String roomNumber;
+    private double basePrice;
+    
+    // Constructors, getters, setters
+    public RoomSetupRequest() {}
+    
+    public RoomSetupRequest(RoomType roomType, String roomNumber, double basePrice) {
+        this.roomType = roomType;
+        this.roomNumber = roomNumber;
+        this.basePrice = basePrice;
+    }
+    
+    public RoomType getRoomType() { return roomType; }
+    public String getRoomNumber() { return roomNumber; }
+    public double getBasePrice() { return basePrice; }
+}
+
+
+
+@Service
+public class HotelManagementService {
+    
+    private final RoomFactory roomFactory;
+    private final HotelRepository hotelRepository;
+    private final RoomRepository roomRepository;
+    
+    @Autowired
+    public HotelManagementService(RoomFactory roomFactory,
+                                HotelRepository hotelRepository,
+                                RoomRepository roomRepository) {
+        this.roomFactory = roomFactory;
+        this.hotelRepository = hotelRepository;
+        this.roomRepository = roomRepository;
+    }
+    
+    // **USAGE 1: Initialize hotel with rooms during setup**
+    public void initializeHotelRooms(String hotelId, List<RoomSetupRequest> roomRequests) {
+        Hotel hotel = hotelRepository.findById(hotelId)
+            .orElseThrow(() -> new IllegalArgumentException("Hotel not found"));
+        
+        List<Room> rooms = new ArrayList<>();
+        for (RoomSetupRequest request : roomRequests) {
+            // **Factory Pattern in action**
+            Room room = roomFactory.createRoom(
+                request.getRoomType(), 
+                request.getRoomNumber(), 
+                request.getBasePrice()
+            );
+            room.setHotelId(hotelId);
+            rooms.add(room);
+        }
+        
+        hotel.setRooms(rooms);
+        hotelRepository.save(hotel);
+        
+        System.out.println("Initialized " + rooms.size() + " rooms for hotel: " + hotelId);
+    }
+    
+    // **USAGE 2: Add new rooms to existing hotel**
+    public Room addNewRoom(String hotelId, RoomType roomType, String roomNumber, double basePrice) {
+        // **Factory creates room with proper configuration**
+        Room newRoom = roomFactory.createRoom(roomType, roomNumber, basePrice);
+        newRoom.setHotelId(hotelId);
+        
+        Room savedRoom = roomRepository.save(newRoom);
+        System.out.println("Added new " + roomType + " room: " + roomNumber);
+        
+        return savedRoom;
+    }
+    
+    // **USAGE 3: Room type conversion/upgrade**
+    public Room upgradeRoomType(String roomId, RoomType newType) {
+        Room existingRoom = roomRepository.findById(roomId)
+            .orElseThrow(() -> new IllegalArgumentException("Room not found"));
+        
+        // **Factory creates new room type with same number**
+        Room upgradedRoom = roomFactory.createRoom(
+            newType, 
+            existingRoom.getRoomNumber(), 
+            existingRoom.getBasePrice()
+        );
+        upgradedRoom.setRoomId(existingRoom.getRoomId()); // Keep same ID
+        upgradedRoom.setHotelId(existingRoom.getHotelId());
+        
+        return roomRepository.save(upgradedRoom);
+    }
+}
